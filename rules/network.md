@@ -135,7 +135,8 @@ grep -hE '^[[:space:]]*(auto|allow-hotplug|iface) ' \
   /etc/network/interfaces \
   /etc/network/interfaces.d/* 2>/dev/null
 command -v networkctl >/dev/null 2>&1 \
-  && networkctl list --no-pager --no-legend
+  && networkctl list --no-pager --no-legend \
+     | grep -vE ' (veth|cali|cni|flannel|vnet)'
 command -v nmcli >/dev/null 2>&1 \
   && nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device
 if command -v cloud-init >/dev/null 2>&1; then
@@ -232,8 +233,9 @@ ip -4 rule; ip -6 rule
 - **Interface ID from the MAC (EUI-64):** the last 64
   bits contain `ff:fe` in the middle and match the
   link's MAC with the seventh bit flipped.
-- `ip rule` beyond the three defaults (local, main,
-  default) is policy routing. WireGuard (`wg-quick`)
+- `ip rule` beyond the defaults (local, main and
+  default for IPv4; local and main for IPv6) is
+  policy routing. WireGuard (`wg-quick`)
   and Tailscale add their own rules; name the owner.
 - A default route with `proto ra` and `expires`
   comes from a Router Advertisement and lives only
@@ -253,7 +255,12 @@ cd /proc/sys/net/ipv6/conf 2>/dev/null \
   off.
 - `accept_ra`: `0` the kernel ignores RAs, `1` it
   accepts them unless forwarding is on, `2` it
-  accepts them even with forwarding.
+  accepts them even with forwarding. Read the
+  uplink's own value: `all/accept_ra` does not
+  override it. ifupdown defaults to `2` for
+  `inet6 auto` but to `1` for `inet6 dhcp`, so a
+  DHCPv6 host that later turns on forwarding walks
+  into the trap below (see interfaces(5)).
 - **Who handles RAs.** systemd-networkd always sets
   the kernel's `accept_ra` to 0 and processes RAs
   itself. So `accept_ra=0` together with a
@@ -287,7 +294,7 @@ grep '^hosts:' /etc/nsswitch.conf
 ss -lnu 'sport = :53'; ss -lnt 'sport = :53'
 hostname; hostname -f
 getent hosts "$(hostname -f)"
-getent ahostsv6 ipv4only.arpa
+getent ahostsv6 ipv4only.arpa | grep -v '^::ffff:'
 ```
 
 `/etc/resolv.conf` tells you who writes it:
@@ -315,10 +322,17 @@ More:
   source.
 - `ss` shows a local resolver on port 53 (resolved on
   127.0.0.53/54, unbound, dnsmasq, bind).
-- `getent ahostsv6 ipv4only.arpa` returns addresses
-  only when a DNS64 resolver synthesizes them. The
-  name has only A records (RFC 7050). An answer
-  means DNS64 and gives the NAT64 prefix.
+- `ipv4only.arpa` has only A records (RFC 7050), so
+  an IPv6 answer for it comes from a DNS64 resolver
+  and carries the NAT64 prefix. glibc's `getent
+  ahostsv6` also lists IPv4-mapped addresses
+  (`::ffff:…`) for names without AAAA; they are not
+  DNS answers, hence the `grep -v`.
+- `getent hosts "$(hostname -f)"` answering
+  `127.0.1.1` comes from `/etc/hosts`: Debian's
+  default, not a finding. It matters only for a
+  service that must announce its public name (an
+  MTA, for instance).
 
 ### E. Outbound reachability
 
@@ -411,7 +425,7 @@ With `t` set to the chosen URL (scheme and host):
 ```bash
 h=${t#*://}
 getent ahostsv4 "$h" | head -1
-getent ahostsv6 "$h" | head -1
+getent ahostsv6 "$h" | grep -v '^::ffff:' | head -1
 for f in 4 6; do
   if command -v curl >/dev/null 2>&1; then
     c=$(curl -"$f" -sS -o /dev/null -m 5 \
@@ -435,8 +449,8 @@ Reading the result:
   exit 0 or 8: the family reaches the internet.
   curl `000`, wget exit 4, or a fetch error: it
   does not.
-- **The target has no AAAA** (empty `ahostsv6`): the
-  v6 result is `inconclusive`, not `broken`. Pick
+- **The target has no AAAA** (empty `ahostsv6`
+  line): the v6 result is `inconclusive`, not `broken`. Pick
   another host from the list or ask the user for a
   target.
 - **Both families fail** on one target: try the next
@@ -476,6 +490,11 @@ addresses from section B:
 - A PTR that does not resolve back to the same
   address (no forward confirmation) hurts mail
   delivery.
+- A generic PTR from the provider's pool (e.g.
+  `dynamic-…pool.<isp>`) is not the host's own name.
+  For a mail host it counts as a missing PTR.
+- A GUA without an AAAA record is normal for a host
+  that only connects outwards.
 
 ## Classification
 
@@ -510,8 +529,10 @@ addresses from section B:
 - `64:ff9b::/96`: NAT64 well-known prefix, seen in
   DNS64 answers and routes, not as a host address.
 
-**Stack** (from addresses, default routes and the
-egress test):
+**Stack** (from the uplink's addresses, default
+routes and the egress test; container bridges do
+not count — Docker with IPv6 puts a ULA on its
+bridge on any host):
 
 - `dual-stack`: usable IPv4 and IPv6 GUA, both with
   a default route.
