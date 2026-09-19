@@ -233,17 +233,15 @@ admin guide,
 - Config: `qm config <vmid>`, `pct config <vmid>`.
 - Migrate: `qm migrate <vmid> <target> --online`
   (VM, live), `pct migrate <vmid> <target> --restart`
-  (containers have no live migration).
-- Stopping a single guest cleanly needs the
-  `shutdown` subcommand of `qm` or `pct`. The taboo
-  guard cannot tell it from a host power-off and
-  denies it. Hand it to the user:
-  ```bash operator
-  qm shutdown <vmid>
-  pct shutdown <vmid>
-  ```
-  `qm stop` / `pct stop` is a hard power cut for the
-  guest, not a substitute. Ask before using it.
+  (containers have no live migration; the restart
+  is a reboot of that guest, so ask first).
+- **Stopping or deleting a guest** powers off or
+  destroys a server: only on the user's explicit
+  request. First show, from the live host and in
+  one call, what it hits: ID, name, state, disks
+  and the newest backup. The clean stop is the
+  `shutdown` subcommand of `qm` or `pct`;
+  `qm stop` / `pct stop` is a hard power cut.
 - Guests with `onboot: 1` start when the node boots.
   HA-managed guests ignore `onboot` and start order.
 
