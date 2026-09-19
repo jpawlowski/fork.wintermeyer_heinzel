@@ -235,13 +235,14 @@ no scattered config.
 
 ### What lives in `memory/`
 
-- `user.md` — SSH usernames and language
-  preference
+- `user.md` — SSH usernames, your alternative SSH
+  ports, and language preference
 - `blacklist.md`, `readonly.md` — access policies
 - `service-policy.md` — per-service opt-out /
   opt-in for auto-reload and auto-restart
-- `servers/<hostname>/` — per-server memory,
-  changelog, todo, and per-server rule overrides
+- `servers/<hostname>/` — per-server memory
+  (including an SSH port other than 22), changelog,
+  todo, and per-server rule overrides
 - `custom-rules/` — your global rule overrides
 - `opencode.json` — your OpenCode config
 - `network.md`, `housekeeping.md` — cross-server

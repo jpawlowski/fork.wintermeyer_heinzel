@@ -51,7 +51,8 @@ servers" — that maps to single-host housekeeping.
 2. **Resolve SSH users.** Read `memory/user.md` for the
    per-host SSH user. Hosts without a mapping go on a
    "skipped: no SSH user known" list (do not prompt — just
-   report).
+   report). Take each host's port from `- SSH port:` in its
+   `memory.md`.
 
 3. **Probe in parallel.** For each in-scope host, run the
    probes from `references/probes.md` in a single batched
