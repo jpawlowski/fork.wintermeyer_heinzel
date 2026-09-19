@@ -11,6 +11,7 @@ overrides — see CLAUDE.md → Rule Overrides).
 ```markdown
 # hostname.example.com
 - IP: 203.0.113.10
+- FQDN: hostname.example.com
 - OS: Debian 12 (Bookworm)
 - Distro family: debian
 - CPU: 4x Intel Xeon E-2236 @ 3.40GHz

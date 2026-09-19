@@ -43,6 +43,30 @@ symlink):
 
 4. **No match -> new server.** Normal first-connection
    flow. Include resolved IP as `- IP:` field.
+   Once connected, record the server's own name as
+   `- FQDN:`:
+   ```
+   hostname -f
+   ```
+   On Linux this is the resolver's canonical name
+   for the host (so `/etc/hosts` counts); on FreeBSD
+   and macOS it is the configured hostname
+   unchanged. Accept it only if it contains a dot
+   and is not `localhost…`. Otherwise, or if
+   `hostname` is missing, use the canonical name the
+   local resolver returns for the name the user
+   gave:
+   ```
+   python3 -c "import socket; \
+     print(socket.getaddrinfo('<hostname>', None, \
+     flags=socket.AI_CANONNAME)[0][3])"
+   ```
+   Treat a name ending in `.local` like one without
+   a dot: mDNS names are unique only on their own
+   network segment. If neither yields a usable name,
+   leave the field out rather than guess. The
+   directory keeps the name it was created under;
+   `- FQDN:` never renames it.
 
 ## Subsequent Connections via Alias
 
@@ -63,6 +87,17 @@ alarming. Only when there is no overlap at all,
 **stop and tell the user.** Ask whether the server
 migrated (update IP) or the alias now points
 elsewhere (detach it).
+
+## Short Names Matching More Than One Server
+
+When the user names a host without a dot, scan
+`memory/servers/*/memory.md` (skip symlinks) for
+`- FQDN:` lines whose first label equals that name,
+ignoring case. If more than one server matches, do
+not guess and do not connect: list the matching
+FQDNs and ask which server is meant, then continue
+with that server's directory. One match or none:
+continue as usual.
 
 ## Removing an Alias
 
