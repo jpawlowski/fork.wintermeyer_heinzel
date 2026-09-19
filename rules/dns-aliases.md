@@ -40,14 +40,15 @@ symlink):
    addresses — a bare `dig +short` can return a
    CNAME target instead of an IP:
    ```
-   dig +short A <hostname> | \
+   dig +short +time=2 +tries=1 A <hostname> | \
      grep -E '^[0-9.]+$'
    ```
    Verify the syntax against the tool versions on
    the machine running the query (see CLAUDE.md →
-   Verify Before Running). If nothing resolves, the
-   IP comparisons below and the IP-level access
-   checks cannot run: tell the user so.
+   Verify Before Running). Resolve once per
+   connection and reuse the result for the access
+   checks and IP Verification. If nothing resolves,
+   the IP comparisons cannot run: tell the user so.
 
 2. **Compare against known servers.** Scan existing
    `memory/servers/*/memory.md` files (skip
@@ -75,14 +76,13 @@ its own SSH user.
 On every connection to a known server, verify the
 current IP matches `- IP:` in memory. Resolve as in
 Detection step 1 and compare against the full set
-of resolved IPs: round-robin
-DNS gives a host multiple A records, and any
-overlap with the stored IP(s) counts as a match.
-Note multi-A hosts in server memory instead of
-alarming. Only when there is no overlap at all,
-**stop and tell the user.** Ask whether the server
-migrated (update IP) or the alias now points
-elsewhere (detach it).
+of resolved IPs: round-robin DNS gives a host
+multiple A records, and any overlap with the stored
+IP(s) counts as a match. Note multi-A hosts in
+server memory instead of alarming. Only when there
+is no overlap at all, **stop and tell the user.**
+Ask whether the server migrated (update IP) or the
+alias now points elsewhere (detach it).
 
 ## Removing an Alias
 

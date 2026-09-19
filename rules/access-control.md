@@ -31,24 +31,19 @@ For both files, the check is:
 1. If the file does not exist, skip (nothing to
    check).
 2. Is the target hostname listed?
-3. Resolve the target's IP(s) (A-record query /
-   python3 fallback, same as DNS alias detection —
-   see `rules/dns-aliases.md`). Is a resolved IP
-   listed?
+3. Resolve the target's IP(s) the way `ssh` does,
+   as in `rules/dns-aliases.md` → Detection step 1.
+   Is a resolved IP listed?
 4. Resolve each listed hostname to its IP(s) the
    same way and compare against the target's
    IP(s). This catches DNS aliases of listed
    hosts that a plain string match would miss.
 
-Resolve through the system resolver, the way `ssh`
-does (`getent ahostsv4`, else `getaddrinfo`, `dig`
-only as the last resort — see
-`rules/dns-aliases.md` → Detection step 1). If no
-address resolves (no resolver tool, unknown name,
-or DNS is down), fall back to exact string matching
-and tell the user explicitly that the IP-level
-check could not be performed. Err on the side of
-caution for anything ambiguous.
+If no address resolves (no resolver tool, unknown
+name, or DNS is down), fall back to exact string
+matching and tell the user explicitly that the
+IP-level check could not be performed. Err on the
+side of caution for anything ambiguous.
 
 ## Server Blacklist
 
