@@ -45,11 +45,11 @@ symlink):
    ```
    Verify the syntax of the tool you use on the
    machine running the query (see CLAUDE.md →
-   Verify Before Running). The blacklist and
-   read-only checks resolve the name this way
-   before this step: reuse their result instead of
-   resolving again. If nothing resolves, the IP
-   comparisons cannot run: tell the user so.
+   Verify Before Running). If the blacklist or
+   read-only check already resolved the name this
+   way, reuse that result; otherwise resolve it
+   here. If nothing resolves, the IP comparisons
+   cannot run: tell the user so.
 
 2. **Compare against known servers.** Scan existing
    `memory/servers/*/memory.md` files (skip
