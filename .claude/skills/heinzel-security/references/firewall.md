@@ -44,15 +44,13 @@ firewall-cmd --zone=<zone> --get-target
 ### Native nftables
 
 Needs root or `sudo -n`; `nft` refuses to list for a normal
-user. One line per input chain, prefixed with its family,
-table and chain name:
+user. The grep keeps every table header and, for each input
+chain, its name and `type` line:
 
 ```bash
 systemctl is-active nftables
 systemctl is-enabled nftables netfilter-persistent
-nft list chains | awk '/^table/ { t = $2 " " $3 }
-  /chain / { c = $2 }
-  /hook input/ { $1 = $1; print t, c, $0 }'
+nft list chains | grep -B1 -e ^table -e "hook input"
 ```
 
 A packet has to pass every input chain of its family, so one
@@ -69,10 +67,14 @@ table does not undo it. Default deny means one of:
 
 A table of family `ip` covers IPv4 only; `inet` covers both.
 
-- No input chain → not a firewall (**CRITICAL** per the
-  intro)
-- Input chain, not default deny → **WARN** "nftables input
-  policy is not deny"
+Native nftables is *active* when `nftables.service` is
+active or an input chain is default deny. Input chains that
+fail2ban, Docker or kube-proxy add with `policy accept;`
+filter nothing on their own.
+
+- Not active → not a firewall (**CRITICAL** per the intro)
+- Service active, not default deny → **WARN** "nftables
+  input policy is not deny"
 - Default deny, but `nftables.service` inactive and nothing
   in `is-enabled` reloads it → **WARN** "nftables rules will
   not survive a reboot"
@@ -85,15 +87,16 @@ through `iptables-legacy` still filter packets, but `nft` and
 `iptables` do not show them. `iptables-legacy` loads its
 kernel modules on demand, so calling it on a clean host
 creates the tables it is meant to look for; the proc files
-decide first whether it runs at all:
+decide first whether it runs at all. Run as root: the proc
+files are readable by root only.
 
 ```bash
 iptables -V
 if iptables -V 2>/dev/null | grep -q nf_tables &&
    cat /proc/net/ip_tables_names \
      /proc/net/ip6_tables_names 2>/dev/null | grep -q .; then
-  iptables-legacy -S | grep -vc '^-P'
-  ip6tables-legacy -S | grep -vc '^-P'
+  iptables-legacy -S | grep -vc ^-P
+  ip6tables-legacy -S | grep -vc ^-P
 fi
 ```
 

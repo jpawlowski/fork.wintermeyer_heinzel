@@ -136,19 +136,17 @@ elif [ -n "$TOOLS" ]; then
       ufw) $SUDO ufw status verbose ;;
       firewall-cmd) $SUDO firewall-cmd --state
                     $SUDO firewall-cmd --list-all ;;
-      nft) $SUDO nft list chains | awk '
-             /^table/ { t = $2 " " $3 }
-             /chain /    { c = $2 }
-             /hook input/ { $1 = $1; print t, c, $0 }' ;;
+      nft) $SUDO nft list chains \
+             | grep -B1 -e ^table -e "hook input" ;;
     esac 2>&1
   done
   echo "--legacy"
   iptables -V 2>/dev/null
   if iptables -V 2>/dev/null | grep -q nf_tables &&
-     cat /proc/net/ip_tables_names \
+     $SUDO cat /proc/net/ip_tables_names \
        /proc/net/ip6_tables_names 2>/dev/null | grep -q .; then
-    $SUDO iptables-legacy -S | grep -vc '^-P'
-    $SUDO ip6tables-legacy -S | grep -vc '^-P'
+    $SUDO iptables-legacy -S | grep -vc ^-P
+    $SUDO ip6tables-legacy -S | grep -vc ^-P
   fi
 fi
 ```
@@ -160,10 +158,11 @@ Classify the tool in this order, first match wins:
 
 1. `ufw` when `ufw status` says `Status: active`
 2. `firewalld` when `firewall-cmd --state` says `running`
-3. `nftables` when `nftables.service` is `active` or the
-   `--nft` block lists an input chain
-4. `none` — nothing of the above; the `nft` binary alone
-   is not a firewall.
+3. `nftables` when `nftables.service` is `active`, or an
+   input chain in the `--nft` block drops by default
+4. `none` — nothing of the above. The `nft` binary alone
+   is not a firewall, nor are input chains that fail2ban,
+   Docker or kube-proxy add with `policy accept;`.
 
 Default deny for `nftables`: an input chain with
 `policy drop;`, or a final drop/reject rule (details in

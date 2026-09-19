@@ -220,16 +220,15 @@ nor firewalld is active; needs root):
 
 ```bash
 systemctl is-active nftables
-nft list chains | awk '/^table/ { t = $2 " " $3 }
-  /chain /    { c = $2 }
-  /hook input/ { $1 = $1; print t, c, $0 }'
+nft list chains | grep -B1 -e ^table -e "hook input"
 ```
 
 Default deny as in `heinzel-security` →
 `references/firewall.md` → Native nftables.
 
 - **CRITICAL** if none of ufw, firewalld or nftables filters
-  incoming traffic
+  incoming traffic (input chains of fail2ban or Docker with
+  `policy accept;` do not count)
 
 ## Failed systemd Units
 
