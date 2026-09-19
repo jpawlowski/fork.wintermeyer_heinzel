@@ -223,6 +223,27 @@ firewall-cmd --state
 
 - **CRITICAL** if the firewall is inactive or not installed
 
+## Network
+
+Compare the live network with the host's
+`network.md` (see `rules/network.md`). Run section B
+and the egress test from `rules/network.md`, then:
+
+```bash
+getent ahosts "$(hostname -f)" | head -3
+```
+
+- **CRITICAL** if name resolution fails
+- **WARN** if a family that `network.md` records as
+  working has no default route or fails the egress
+  test (`v6 broken`, `no v6 route`)
+- **WARN** if the host is in the RA/forwarding trap
+  (`rules/network.md` → Findings): report the
+  remaining `expires` of the IPv6 default route
+- **INFO** if an uplink address differs from
+  `network.md` — re-run the profile and update
+  `network.md` (workflow step 6)
+
 ## Failed systemd Units
 
 ```bash

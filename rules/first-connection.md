@@ -29,17 +29,21 @@ moment") — don't skip.
 6. **Server memory file.** Create on first
    connection, read on every subsequent connection.
    See `rules/server-memory.md`.
-7. **Activity check.** Every connection, not just
+7. **Network profile.** Full profile on first
+   connection and on a known host without
+   `network.md`; afterwards a quick address
+   comparison. See `rules/network.md`.
+8. **Activity check.** Every connection, not just
    the first. See `rules/activity-check.md`.
-8. **Then** execute the user's request.
+9. **Then** execute the user's request.
 
 ## Local mode
 
 In local mode (`localhost`, the user's own
 hostname), skip steps 1–4 — they are remote-only
 (see `CLAUDE.md` → How It Works → Local mode).
-Still run OS detection, server memory, and activity
-check.
+Still run OS detection, server memory, network
+profile, and activity check.
 
 ## Why it's mandatory
 

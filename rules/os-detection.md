@@ -47,6 +47,9 @@ its OS.
 
 5. Create a server memory file.
 
+6. Build the network profile and write
+   `network.md` — see `rules/network.md`.
+
 ## On subsequent connections
 
 Subsequent connections run the same pipeline as the

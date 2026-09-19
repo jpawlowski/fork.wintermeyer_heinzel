@@ -1,9 +1,10 @@
 # Server Memory
 
 Each server: `memory/servers/<hostname>/` with
-`memory.md`, `changelog.log`, optionally `todo.md`,
-and optionally `rules.md` (per-server rule
-overrides — see CLAUDE.md → Rule Overrides).
+`memory.md`, `network.md`, `changelog.log`,
+optionally `todo.md`, and optionally `rules.md`
+(per-server rule overrides — see CLAUDE.md → Rule
+Overrides).
 
 **On first connection:** create directory and
 `memory.md` with at least:
@@ -16,8 +17,14 @@ overrides — see CLAUDE.md → Rule Overrides).
 - CPU: 4x Intel Xeon E-2236 @ 3.40GHz
 - RAM: 16 GB
 - Disk: 80 GB (/ ext4, 45% used)
+- Network: dual-stack, v6 egress OK — see network.md
 - Last connected: 2026-02-25
 ```
+
+`network.md` holds the network profile: manager,
+addresses, routes, DNS, egress per address family,
+and the public DNS view. Format and probes:
+`rules/network.md`.
 
 Adapt fields to OS (add Arch, Homebrew for macOS;
 add `Mode: local` for localhost).

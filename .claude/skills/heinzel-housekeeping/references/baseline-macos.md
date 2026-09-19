@@ -75,6 +75,20 @@ command -v brew &>/dev/null && brew outdated
 - **INFO** if the firewall is off (not WARN — common and less
   critical on macOS behind NAT)
 
+## Network
+
+Compare the live network with the machine's
+`network.md` (see `rules/network.md`). Run the macOS
+probe and the egress test from `rules/network.md`.
+
+- **WARN** if a family that `network.md` records as
+  working has no default route or fails the egress
+  test
+- **INFO** if the primary service or its addresses
+  differ from `network.md` (normal on a laptop that
+  changes networks — update `network.md`, no
+  further finding)
+
 ## SMART Disk Status
 
 ```bash

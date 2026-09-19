@@ -12,6 +12,7 @@ echo "###fw###"; <firewall probe>
 echo "###mta###"; <mta probe>
 echo "###time###"; <time probe>
 echo "###reboot###"; <reboot probe>
+echo "###net###"; <network probe>
 '
 ```
 
@@ -234,3 +235,65 @@ Highlight as drift / warning:
   has not fired despite a pending kernel.
 - Hosts with uptime > 90d — even without a pending reboot,
   worth a heads-up.
+
+## 7. Network
+
+Run sections B, C and D of the Linux probes and the
+egress test from `rules/network.md`, plus this line
+from section A:
+
+```bash
+for u in systemd-networkd NetworkManager networking \
+         network wicked systemd-resolved; do
+  printf '%s=%s\n' "$u" \
+    "$(systemctl is-active "$u" 2>/dev/null)"
+done
+```
+
+Skip the netplan grep (it needs root) and the public
+DNS view (it runs on the workstation, not per host).
+None of the rest needs root. Classify with the
+Classification section of `rules/network.md`.
+
+Row keys:
+
+- Network manager
+- cloud-init owns network (yes/no)
+- Stack (`dual-stack`, `v4-only`, `v6-only`,
+  `v4 + ULA`, plus `v6 broken` / `no v6 route`)
+- IPv4 address class (public / RFC 1918 / CGNAT)
+  and addressing (static / DHCP)
+- IPv6 address class (GUA / ULA / none) and
+  addressing (static / SLAAC / DHCPv6)
+- RA handled by (kernel / networkd / NetworkManager
+  / none)
+- Forwarding v4 / v6
+- Egress v4 / v6 (`OK`, `fail`, `inconclusive`,
+  `via proxy`)
+- resolv.conf mode (resolved stub / resolved direct /
+  NetworkManager / resolvconf / static)
+- Upstream nameservers (count per family)
+- DNSSEC / DoT
+- Temporary IPv6 addresses (yes/no)
+
+Highlight as drift:
+
+- Any host whose stack carries `v6 broken` or
+  `no v6 route` while others reach IPv6.
+- Any host caught in the RA/forwarding trap
+  (`rules/network.md` → Findings), with the
+  remaining `expires` of its IPv6 default route.
+- Different managers or resolv.conf modes across
+  hosts of the same distro release — the same fix
+  will not apply everywhere.
+- Different upstream nameservers across hosts in the
+  same network.
+- A host with IPv6 disabled while the others run
+  dual-stack.
+- Any live value that contradicts the host's
+  `network.md` (the profile is stale — suggest
+  re-running it on that host).
+
+Every finding from `rules/network.md` → Findings
+that shows up on a single host goes into "Drift
+detected" too, with its severity.

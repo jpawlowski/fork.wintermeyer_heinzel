@@ -5,7 +5,9 @@ description: Compare key policies across all servers in
   memory/servers/ to surface silent drift. Makes no configuration
   changes; writes one audit-trail line to each host's journal.
   Probes unattended-upgrades, sshd effective config, firewall
-  posture, MTA, time sync, and auto-reboot behaviour. Use when
+  posture, MTA, time sync, auto-reboot behaviour, and the
+  network profile (manager, IPv4/IPv6 stack, egress, DNS
+  resolver). Use when
   the user asks to "fleet audit", "vergleiche alle server",
   "policy drift check", "are my servers configured the same?",
   or after a fix on one host to find which others carry the
@@ -81,14 +83,16 @@ servers" — that maps to single-host housekeeping.
    not own server state. If the audit uncovers a memory
    file that contradicts the live config, mention it in
    the "Drift detected" section so the user can decide
-   what to fix.
+   what to fix. The network category is compared
+   against each host's `network.md` the same way.
 
 ## References
 
 Read on demand:
 
 - `references/probes.md` — the exact commands to run per
-  category (UA, sshd, firewall, MTA, time, auto-reboot).
+  category (UA, sshd, firewall, MTA, time, auto-reboot,
+  network).
 - `references/output-format.md` — table layout and the
   "Drift detected" section format.
 
