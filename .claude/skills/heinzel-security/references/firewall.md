@@ -7,10 +7,11 @@ policy is deny/drop. An inactive or missing firewall on a Linux
 server is **CRITICAL** — aligned with the housekeeping severity.
 
 Three variants count as a firewall: ufw, firewalld, and native
-nftables (Debian's own default: `nftables.service` loading
-`/etc/nftables.conf`). Check them in that order and judge the
-host by the first one that is active. Report **CRITICAL** "No
-active firewall" only when none of the three is.
+nftables (`nftables.service` loading `/etc/nftables.conf`,
+installed on Debian with the unit off). Check them in that
+order and judge the host by the first one that is active.
+Report **CRITICAL** "No active firewall" only when none of
+the three is.
 
 `references/firewall-nftables-docker.md` checks native
 nftables and iptables-legacy rules. Run its Docker check

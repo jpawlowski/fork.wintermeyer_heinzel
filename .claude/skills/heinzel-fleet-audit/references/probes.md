@@ -123,8 +123,8 @@ Classify the tool in this order, first match wins:
    is not a firewall, nor are input chains that fail2ban,
    Docker or kube-proxy add with `policy accept;`.
 
-Default deny for `nftables`, and what the two counts in
-the `--legacy` block mean: `heinzel-security` →
+Default deny for `nftables`, and what `legacy4` and
+`legacy6` in the `--legacy` block mean: `heinzel-security` →
 `references/firewall-nftables-docker.md`. No count means
 no legacy table.
 
@@ -143,6 +143,7 @@ for t in ufw firewall-cmd nft; do
 done
 echo "tools=${TOOLS:- none}"
 echo "nftables.service=$(systemctl is-active nftables 2>/dev/null)"
+echo "nftables.enabled=$(systemctl is-enabled nftables 2>/dev/null)"
 if [ -n "$TOOLS" ] && [ "$SUDO" = "-" ]; then
   echo "state=unknown(needs-root)"
 elif [ -n "$TOOLS" ]; then
@@ -158,11 +159,11 @@ elif [ -n "$TOOLS" ]; then
   done
   echo "--legacy"
   iptables -V 2>/dev/null
-  if iptables -V 2>/dev/null | grep -q nf_tables &&
-     $SUDO cat /proc/net/ip_tables_names \
-       /proc/net/ip6_tables_names 2>/dev/null | grep -q .; then
-    $SUDO iptables-legacy -S | grep -vc ^-P
-    $SUDO ip6tables-legacy -S | grep -vc ^-P
+  if iptables -V 2>/dev/null | grep -q nf_tables; then
+    $SUDO grep -q . /proc/net/ip_tables_names 2>/dev/null &&
+      echo "legacy4=$($SUDO iptables-legacy -S | grep -vc ^-P)"
+    $SUDO grep -q . /proc/net/ip6_tables_names 2>/dev/null &&
+      echo "legacy6=$($SUDO ip6tables-legacy -S | grep -vc ^-P)"
   fi
 fi
 ```
@@ -179,7 +180,10 @@ Row keys for the table:
   a WARN — `nft` does not show them)
 - Default policy (deny incoming required)
 - Number of open ports / services
-- Whether 22/tcp is open (must be yes)
+- Whether the SSH port is open (must be yes: 22, or each
+  `port` from section 2)
+- `nftables.enabled=enabled` next to an active ufw or
+  firewalld (WARN: the unit flushes their rules)
 
 Highlight as drift:
 

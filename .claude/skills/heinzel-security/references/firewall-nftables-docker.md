@@ -39,7 +39,9 @@ filter nothing on their own.
 - Not active → not a firewall: **CRITICAL** "No active
   firewall" when ufw and firewalld are inactive too
 - Service active, not default deny → **WARN** "nftables
-  input policy is not deny"
+  input policy is not deny". But if its input chains hold
+  no rules at all (Debian's stock `/etc/nftables.conf`),
+  nothing is filtered: **CRITICAL** "No active firewall"
 - Default deny, but `nftables.service` inactive and nothing
   in `is-enabled` reloads it → **WARN** "nftables rules will
   not survive a reboot"
@@ -55,13 +57,16 @@ creates the tables it is meant to look for; the proc files
 decide first whether it runs at all. Run as root: the proc
 files are readable by root only.
 
+Each family gets its own gate, so a legacy IPv4 table does
+not load the IPv6 module:
+
 ```bash
 iptables -V
-if iptables -V 2>/dev/null | grep -q nf_tables &&
-   cat /proc/net/ip_tables_names \
-     /proc/net/ip6_tables_names 2>/dev/null | grep -q .; then
-  iptables-legacy -S | grep -vc ^-P
-  ip6tables-legacy -S | grep -vc ^-P
+if iptables -V 2>/dev/null | grep -q nf_tables; then
+  grep -q . /proc/net/ip_tables_names 2>/dev/null &&
+    echo "legacy4=$(iptables-legacy -S | grep -vc ^-P)"
+  grep -q . /proc/net/ip6_tables_names 2>/dev/null &&
+    echo "legacy6=$(ip6tables-legacy -S | grep -vc ^-P)"
 fi
 ```
 
@@ -69,6 +74,12 @@ fi
   next to nf_tables, invisible to nft". List them with
   `iptables-legacy -S` and report which tool loads them.
 - No count printed, or both 0 → OK
+
+ufw or firewalld active while `systemctl is-enabled
+nftables` says `enabled` → **WARN** "nftables.service will
+flush the firewall's rules": the stock
+`/etc/nftables.conf` starts with `flush ruleset`, so every
+start, reload or stop of that unit wipes them.
 
 ## Docker published ports
 
