@@ -134,14 +134,10 @@ remote connection before any other work.
   redirect or `tee` onto one. Read-only inspection
   (e.g. `lsblk`, `fdisk -l`, `gpart show`,
   `diskutil list`, `nvme list`, `hdparm -I`) is
-  always allowed. Never modify `sshd_config`, its
-  `sshd_config.d/` drop-ins or a file an appliance
-  merges into it (pfSense: `/etc/sshd_extra`),
-  wherever sshd keeps it (`/etc/ssh`,
-  `/usr/local/etc/ssh`, …). Never delete or
-  overwrite SSH keys — host keys, `authorized_keys`,
-  `id_*`, or the directory holding them (`~/.ssh`,
-  OPNsense: `/conf/sshd`) — and that includes
+  always allowed. Never modify `sshd_config` or its
+  `sshd_config.d/` drop-ins, wherever sshd keeps
+  them (`/etc/ssh`, `/usr/local/etc/ssh`, …). Never
+  delete or overwrite SSH keys, and that includes
   moving, truncating or re-permissioning them.
   Never halt or power off a server.
   Inspect `sshd_config`, SSH keys and disk devices

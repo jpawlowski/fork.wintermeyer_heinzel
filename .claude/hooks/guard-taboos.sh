@@ -16,7 +16,7 @@
 #   - destroying SSH keys (host keys, authorized_keys, id_*,
 #     or the directory holding them: ~/.ssh, an appliance
 #     key store such as /conf/sshd) by any means: rm/shred/
-#     truncate/mv/chmod/chown/install/ln/setfacl, find
+#     truncate/mv/chmod/chown/install/ln/setfacl/patch, find
 #     -delete, a redirect, ssh-keygen -f, or a write into
 #     one (tee, cp/rsync/scp, dd, sed -i, an editor, curl -o
 #     and other output flags)
@@ -549,7 +549,10 @@ fi
 # The set of writers cannot be closed (an archive unpacked into
 # place, a git checkout, any tool with an output flag of its own),
 # so this stays a backstop, not a sandbox.
-END="([\"'[:space:];|&)\`]|\$)"
+#
+# END includes < and >: a redirect glued to the path
+# (tee /etc/ssh/sshd_config<<EOF) still ends it.
+END="([\"'[:space:];|&)\`<>]|\$)"
 ENDARG="[\"']?([[:space:]]+(-[^[:space:]]*|[0-9]*[<>]+&?([[:space:]]*[^[:space:]]+)?))*[[:space:])\`]*(#.*)?\$"
 writes_to() {
   hit "(^|[^[:alnum:]_.-])(tee|sponge)[[:space:]]([^;|&<>]*[[:space:]])?[^[:space:];|&]*$1$END" \
@@ -576,10 +579,14 @@ fi
 # reflected that while this one did not.
 # KEY is checked once and first: most commands name no key, and
 # every key rule below needs one.
+# CLOBBER: tools that delete, move, re-permission or rewrite a
+# file named on their command line. Both rules below use it; the
+# sshd_config rule adds cp, since a copy onto it replaces it.
+CLOBBER='rm|shred|unlink|truncate|mv|chmod|chown|install|ln|setfacl|patch'
 HAS_KEY=0
 hit "$KEY" && HAS_KEY=1
 if [ "$HAS_KEY" -eq 1 ] \
-  && { hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln|setfacl)([^[:alnum:]_-]|$)' \
+  && { hit "(^|[^[:alnum:]_-])($CLOBBER)([^[:alnum:]_-]|\$)" \
        || hit '(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)'; }
 then
   deny "deleting, moving or re-permissioning SSH keys is never \
@@ -602,7 +609,7 @@ if hit "$SSHD"; then
     || { hit '(^|[^[:alnum:]_-])(sed|perl)([^[:alnum:]_-]|$)' \
          && hit '(^|[[:space:]])-i'; } \
     || hit "(^|[^[:alnum:]_-])$EDITOR([^[:alnum:]_-]|\$)" \
-    || hit '(^|[^[:alnum:]_-])(rm|truncate|chmod|chown|mv|cp)([^[:alnum:]_-]|$)' \
+    || hit "(^|[^[:alnum:]_-])($CLOBBER|cp)([^[:alnum:]_-]|\$)" \
     || writes_to "$SSHD"
   then
     deny "modifying sshd_config or a file merged into it is \

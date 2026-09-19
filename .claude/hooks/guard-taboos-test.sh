@@ -494,6 +494,28 @@ check pass 'ssh-keygen -lf /conf/sshd/ssh_host_ed25519_key.pub'
 check pass 'cp /conf/config.xml /root/config.xml.bak'
 check pass 'rm /conf/backup/config-1700000000.xml'
 
+# --- a redirect glued to the protected path --------------------
+# END includes < and >: these replaced the file while the spaced
+# forms were denied.
+check deny 'tee /etc/ssh/sshd_config<<EOF'
+check deny 'echo X | tee -a /etc/ssh/sshd_config>/dev/null'
+check deny 'tee -a /etc/ssh/sshd_config</tmp/new'
+check deny 'tee /etc/ssh/sshd_config.d/x.conf>/dev/null'
+check deny 'ssh root@h "tee /etc/ssh/sshd_config.d/99.conf</tmp/x"'
+check deny 'tee ~/.ssh/authorized_keys</tmp/k'
+check deny 'echo k | tee -a ~/.ssh/authorized_keys>/dev/null'
+check deny 'tee /etc/ssh/ssh_host_ed25519_key</tmp/k'
+check pass 'tee /tmp/report.txt</tmp/in'
+
+# --- CLOBBER: one list of destructive tools for keys and sshd --
+check deny 'install -m 600 /tmp/new /etc/ssh/sshd_config'
+check deny 'install -m 600 /tmp/new /usr/local/etc/ssh/sshd_config'
+check deny 'ln -sf /tmp/x /etc/ssh/sshd_config'
+check deny 'patch /etc/ssh/sshd_config < /tmp/d'
+check deny 'shred -u /etc/ssh/sshd_config'
+check deny 'patch ~/.ssh/authorized_keys < /tmp/d'
+check pass 'ls -ln /etc/ssh/sshd_config'
+
 # --- heredoc bodies: data vs code (issue #8) -------------------
 # Prose legitimately contains taboo words. A heredoc body is only
 # exempt when its CONSUMER cannot execute it. The deny cases below
