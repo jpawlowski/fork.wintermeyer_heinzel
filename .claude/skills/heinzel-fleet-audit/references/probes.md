@@ -130,19 +130,26 @@ echo "nftables.service=$(systemctl is-active nftables 2>/dev/null)"
 if [ -n "$TOOLS" ] && [ "$SUDO" = "-" ]; then
   echo "state=unknown(needs-root)"
 elif [ -n "$TOOLS" ]; then
-  case "$TOOLS" in *ufw*)
-    echo "--ufw"; $SUDO ufw status verbose 2>&1 ;; esac
-  case "$TOOLS" in *firewall-cmd*)
-    echo "--firewalld"; $SUDO firewall-cmd --state 2>&1
-    $SUDO firewall-cmd --list-all 2>&1 ;; esac
-  case "$TOOLS" in *nft*)
-    echo "--nft"
-    $SUDO nft list chains 2>&1 \
-      | grep -E '^table|chain |hook input' ;; esac
+  for t in $TOOLS; do
+    echo "--$t"
+    case $t in
+      ufw) $SUDO ufw status verbose ;;
+      firewall-cmd) $SUDO firewall-cmd --state
+                    $SUDO firewall-cmd --list-all ;;
+      nft) $SUDO nft list chains | awk '
+             /^table/ { t = $2 " " $3 }
+             /chain /    { c = $2 }
+             /hook input/ { $1 = $1; print t, c, $0 }' ;;
+    esac 2>&1
+  done
   echo "--legacy"
   iptables -V 2>/dev/null
-  cat /proc/net/ip_tables_names \
-    /proc/net/ip6_tables_names 2>/dev/null
+  if iptables -V 2>/dev/null | grep -q nf_tables &&
+     cat /proc/net/ip_tables_names \
+       /proc/net/ip6_tables_names 2>/dev/null | grep -q .; then
+    $SUDO iptables-legacy -S | grep -vc '^-P'
+    $SUDO ip6tables-legacy -S | grep -vc '^-P'
+  fi
 fi
 ```
 
@@ -154,20 +161,18 @@ Classify the tool in this order, first match wins:
 1. `ufw` when `ufw status` says `Status: active`
 2. `firewalld` when `firewall-cmd --state` says `running`
 3. `nftables` when `nftables.service` is `active` or the
-   `--nft` block shows a chain with `hook input`
-4. `none` — nothing of the above. The `nft` binary alone
-   is not a firewall: Debian installs the nftables package
-   by default (priority `important`).
+   `--nft` block lists an input chain
+4. `none` — nothing of the above; the `nft` binary alone
+   is not a firewall.
 
 Default deny for `nftables`: an input chain with
 `policy drop;`, or a final drop/reject rule (details in
 `heinzel-security` → `references/firewall.md`).
 
-If `iptables -V` says `(nf_tables)` and the `--legacy`
-block lists a table, count the legacy rules on that host:
-`iptables-legacy -S | grep -vc '^-P'` (and
-`ip6tables-legacy`). The proc files come first because
-`iptables-legacy` loads its kernel modules on demand.
+The two counts in the `--legacy` block are legacy
+iptables rules next to nf_tables (`heinzel-security` →
+`references/firewall.md` → Mixed frameworks); no count
+means no legacy table.
 
 Row keys for the table:
 

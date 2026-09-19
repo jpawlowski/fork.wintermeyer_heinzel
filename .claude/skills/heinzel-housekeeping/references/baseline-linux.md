@@ -220,26 +220,16 @@ nor firewalld is active; needs root):
 
 ```bash
 systemctl is-active nftables
-nft list chains | grep -E '^table|chain |hook input'
+nft list chains | awk '/^table/ { t = $2 " " $3 }
+  /chain /    { c = $2 }
+  /hook input/ { $1 = $1; print t, c, $0 }'
 ```
 
-A chain with `hook input` and `policy drop;` (or a final
-drop/reject rule) is an active firewall. Details in
-`heinzel-security` → `references/firewall.md`.
+Default deny as in `heinzel-security` →
+`references/firewall.md` → Native nftables.
 
 - **CRITICAL** if none of ufw, firewalld or nftables filters
   incoming traffic
-
-**Docker** (when `command -v docker` finds it):
-
-```bash
-docker ps --format '{{.Names}} {{.Ports}}'
-```
-
-- **WARN** for each port published on `0.0.0.0:`, `[::]:` or
-  `:::` — Docker routes it past ufw and firewalld. OK if a
-  `DOCKER-USER` rule restricts it (see the security
-  reference) or it is bound to `127.0.0.1`.
 
 ## Failed systemd Units
 

@@ -97,7 +97,8 @@ for details.
 
 ## Docker
 
-Triggered when `memory.md` mentions Docker.
+Triggered when `memory.md` mentions Docker or
+`command -v docker` finds it.
 
 ```bash
 docker ps --format \
@@ -107,6 +108,11 @@ docker ps --format \
 
 - **WARN** for any container not in "Up" state
 - Report container names and status
+- **WARN** for each published port (`->`) not bound to
+  `127.0.0.1` or `[::1]` — Docker routes it past ufw and
+  firewalld. OK if a `DOCKER-USER` rule restricts it
+  (`heinzel-security` → `references/firewall.md` → Docker
+  published ports).
 
 ## nginx
 

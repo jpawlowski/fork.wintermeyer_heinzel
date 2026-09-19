@@ -51,16 +51,12 @@ and fight for the same role.
   dnsmasq, pdns-recursor, knot-resolver,
   systemd-resolved
 - **Firewall manager:** ufw, firewalld, and native
-  nftables (`nftables.service` with
-  `/etc/nftables.conf`, Debian's default). The
-  nftables *package* has Debian priority `important`
-  and sits on most hosts unused, so native nftables
-  counts as a member only when
-  `systemctl is-enabled nftables` says `enabled`.
-  Debian's stock `/etc/nftables.conf` starts with
-  `flush ruleset`, and the unit's stop runs it too:
-  every start, reload or stop of that service wipes
-  the rules of ufw or firewalld. Raw `iptables` is a
+  nftables — the last only when `systemctl is-enabled
+  nftables` says `enabled` (the package sits unused on
+  most Debian hosts). Debian's stock
+  `/etc/nftables.conf` starts with `flush ruleset`, so
+  starting, reloading or stopping that unit wipes
+  ufw's or firewalld's rules. Raw `iptables` is a
   backend, not a member. FreeBSD's pf and ipfw are in
   base, no frontend packages compete.
 - **Container runtime:** docker.io, docker-ce,
