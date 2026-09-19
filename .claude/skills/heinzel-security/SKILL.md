@@ -84,6 +84,9 @@ Read on demand, only when the relevant section applies:
 - `references/ssh.md` — SSH password auth, root login, weak
   algorithms, MaxAuthTries, X11Forwarding, the SSH client on
   the server (Linux and macOS).
+- `rules/ssh-ca-issuing.md` — when a CA that signs user
+  certificates runs on the host or its rules are at hand: who
+  gets certificates for which principals, and for how long.
 - `references/firewall.md` — Linux (ufw / firewalld) and macOS
   (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID
