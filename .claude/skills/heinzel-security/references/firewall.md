@@ -67,7 +67,7 @@ iptables -V
   `/etc/nftables.conf`, so read nftables directly:
 
   ```bash
-  nft list chains | grep -E '^table|hook input'
+  nft list chains | grep -E '^table|chain |hook input'
   ```
 
   IPv6 is filtered when a chain with `hook input`

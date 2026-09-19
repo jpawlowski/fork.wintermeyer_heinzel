@@ -128,6 +128,9 @@ up=$(ip -4 route show default \
   | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -1)
 [ -n "$up" ] || up=$(ip -6 route show default \
   | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -1)
+# No default route at all: take the link SSH came in on.
+[ -n "$up" ] || up=$(ip route get "${SSH_CONNECTION%% *}" \
+  2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p')
 echo "uplink=$up"
 [ -e "/sys/class/net/$up/device" ] && echo "uplink-physical=yes"
 [ -d "/sys/class/net/$up/bridge" ] && echo "uplink-bridge=yes"
@@ -157,8 +160,9 @@ if command -v networkctl >/dev/null 2>&1; then
 fi
 if command -v nmcli >/dev/null 2>&1; then
   nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device \
-    | grep -vE "^($n)"
-  c=$(nmcli -g GENERAL.CONNECTION device show "$up")
+    2>/dev/null | grep -vE "^($n)"
+  c=$(nmcli -g GENERAL.CONNECTION device show "$up" \
+    2>/dev/null)
   [ -n "$c" ] && nmcli -g ipv4.method,ipv6.method \
     connection show "$c"
 fi
@@ -230,15 +234,25 @@ echo "### E egress"
 echo "proxy-env=$(env | grep -ciE '^(https?|all)_proxy=')"
 echo "proxy-apt=$(apt-config dump 2>/dev/null \
   | grep -ciE '^Acquire::https?::Proxy ')"
+echo "proxy-dnf=$(grep -hciE '^proxy[[:space:]]*=' \
+  /etc/dnf/dnf.conf /etc/yum.conf 2>/dev/null \
+  | grep -c '^[1-9]')"
+echo "proxy-suse=$(grep -c '^PROXY_ENABLED=\"yes\"' \
+  /etc/sysconfig/proxy 2>/dev/null)"
 [ -n "$T" ] || T=$(grep -rhoE 'https?://[^/ "]+' \
   /etc/apt/sources.list /etc/apt/sources.list.d/ \
   /etc/yum.repos.d/ /etc/zypp/repos.d/ 2>/dev/null \
   | sort -u | head -3)
+[ -n "$T" ] || echo "egress=no-target"
 for t in $T; do
   h=${t#*://}; ok=0
+  v4=$(getent ahostsv4 "$h" | head -1)
   v6=$(getent ahostsv6 "$h" | grep -v '^::ffff:' | head -1)
+  echo "resolve $h: v4=${v4%% *} v6=${v6%% *}"
   for f in 4 6; do
-    if [ "$f" = 6 ] && [ -z "$v6" ]; then
+    if [ "$f" = 4 ] && [ -z "$v4" ]; then
+      c=no-a
+    elif [ "$f" = 6 ] && [ -z "$v6" ]; then
       c=no-aaaa
     elif command -v curl >/dev/null 2>&1; then
       c=$(curl -"$f" -sS -o /dev/null --connect-timeout 3 \
@@ -250,7 +264,7 @@ for t in $T; do
       c=no-client
     fi
     case $c in
-      000|wget-exit=4|no-aaaa|no-client) ;;
+      000|wget-exit=4|no-a|no-aaaa|no-client) ;;
       *) ok=1 ;;
     esac
     echo "egress$f $t=$c"
@@ -440,13 +454,20 @@ Reading the result:
   exit 0 or 8: the family reaches the internet.
   curl `000`, wget exit 4, or a fetch error: it
   does not.
-- `no-aaaa`: the target has no AAAA, so the v6
-  result is `inconclusive`, not `broken`. The probe
+- `no-aaaa` / `no-a`: the target has no record of
+  that family, so the result is `inconclusive`, not
+  `broken`. The probe
   moves on to the next repository host; if none has
   AAAA, ask the user for a target.
 - **Both families fail** on every target: check the
   repositories before calling egress dead.
-- **A proxy is configured** (count above 0): direct
+- `egress=no-target`: no repository host found (a
+  distro without apt, dnf or zypper). Set `T` through
+  the override and run again.
+- `resolve` empty in both families on every target:
+  name resolution fails (see Findings).
+- **A proxy is configured** (any `proxy-*` count
+  above 0): direct
   egress may be blocked on purpose. Record
   `Egress: via proxy` and do not report a failed
   direct test as a finding.

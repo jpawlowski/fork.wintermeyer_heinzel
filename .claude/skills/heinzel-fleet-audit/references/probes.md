@@ -243,7 +243,11 @@ Highlight as drift / warning:
 ## 7. Network
 
 Run the Linux probe from `rules/network.md` → Probe —
-Linux as the `###net###` block. It is one script,
+Linux as the `###net###` block. It contains single
+quotes, so it cannot go inside the single-quoted
+command above: send the bundle as a script on stdin
+(`ssh … USER@HOST 'sh -s' <<'EOF'`) instead. It is one
+script,
 handles its one root-only read (netplan) with the
 privilege ladder above, and bounds its output.
 Classify with `rules/network.md` → Classification.
