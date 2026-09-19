@@ -149,26 +149,6 @@ host it is (picker: each match as `host:port`, plus
 
 The port heinzel connects to can also differ from
 the port sshd listens on: a router forwards 2222 to
-22 inside. The stored port is the connect port.
-
-## Firewall
-
-A firewall rule must keep open the ports sshd
-**listens** on, not the connect port — all of them
-when `sshd -T` lists several. Read them on the host
-in the same call as the firewall status, before any
-change:
-
-    sshd -T | grep -i '^port '
-
-(as root; unprivileged: `ss -tlnp` or
-`sockstat -4l` on FreeBSD and look for sshd.)
-
-If it is not 22, the shortcuts in the family rule
-files open the wrong port: `ufw allow OpenSSH` and
-firewalld's `--add-service=ssh` cover 22 only. Use
-the port instead:
-
-    ufw allow <port>/tcp
-    firewall-cmd --permanent --zone=<zone> --add-port=<port>/tcp
-    pass in on $ext_if proto tcp to port <port>   # pf
+22 inside. The stored port is the connect port; a
+firewall on the host keeps open the ports sshd
+listens on (`CLAUDE.md` → Firewall & network).

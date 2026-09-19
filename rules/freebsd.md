@@ -38,6 +38,9 @@ Rules for FreeBSD (all versions).
 - **Critical:** before enabling `pf`, always add a
   rule to pass SSH traffic first. A `pf` config
   without an SSH rule locks you out immediately.
+  The example below passes port 22 only: list every
+  port sshd listens on (`to port { 22 2222 }`,
+  `CLAUDE.md` → Firewall & network).
 - Minimal safe `/etc/pf.conf`:
   ```
   ext_if = "vtnet0"  # set to the real interface, see ifconfig
@@ -46,8 +49,6 @@ Rules for FreeBSD (all versions).
   pass out all keep state
   pass in on $ext_if proto tcp to port 22
   ```
-- sshd not on 22? See `rules/ssh-port.md` →
-  Firewall.
 - Do **not** rely on the `egress` interface group in
   rules unless `ifconfig -g egress` shows it is
   populated on this host. If the group is missing or

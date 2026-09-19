@@ -87,9 +87,8 @@ the first value it sees.
 
 **Non-standard port:** when server memory holds
 `- SSH port: <port>`, add `-o Port=<port>` to either
-set on every call. New host, 22 refused, or a
-firewall change: read `rules/ssh-port.md`. Never
-scan for a port.
+set on every call. New host or 22 refused: read
+`rules/ssh-port.md`. Never scan for a port.
 
 Rate limits count connections, fail2ban counts
 failed logins: read `rules/ssh-connections.md`.
@@ -169,10 +168,15 @@ remote connection before any other work.
   when batched into one.
 - **Firewall & network:** Be extremely careful — a
   mistake cuts off SSH access. Discuss with the user
-  first.
+  first. Before enabling or tightening a firewall,
+  read the ports sshd listens on (as root:
+  `sshd -T | grep -iE '^(port|listenaddress) '`,
+  a port in a `listenaddress` line counts too) and
+  keep every one open: `ufw allow OpenSSH` and
+  firewalld's `ssh` service cover 22 only.
 - **Never remove or block the SSH port** — 22, or
-  the port sshd listens on (`rules/ssh-port.md`). If
-  the user asks, explain the risk and refuse. Offer
+  any other port sshd listens on. If the user
+  asks, explain the risk and refuse. Offer
   alternatives (e.g. restricting to specific IPs).
 - **Verify the default incoming policy is
   deny/drop.** See `rules/<family>.md`.

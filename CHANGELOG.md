@@ -1,5 +1,38 @@
 # Changelog
 
+## 2.22.0 — 2026-09-19
+
+- **Native nftables counts as a firewall.** A
+  Debian host that filtered with its own
+  `nftables.service` got CRITICAL "No active
+  firewall". The audits now also warn about
+  iptables-legacy rules hidden next to nf_tables,
+  an enabled `nftables.service` beside ufw, and
+  Docker ports published past the firewall.
+  Contributed by Julian Pawlowski (#23).
+- **Enabling a firewall keeps every SSH port
+  open.** `ufw allow OpenSSH` and firewalld's `ssh`
+  service open 22 only, which locked heinzel out of
+  a host whose sshd listened elsewhere. The ports
+  now come from `sshd -T`. Found by Julian
+  Pawlowski in #32 (#49).
+- **The blacklist sees names that only ssh
+  resolves.** `dig` ignored `/etc/hosts`, the
+  search domain, VPN resolvers and ssh_config
+  aliases, and an empty answer skipped the IP check
+  without a warning. Names now go through `ssh -G`
+  and the system resolver. Contributed by Julian
+  Pawlowski (#43).
+- **The guard catches more writes to
+  `sshd_config` and keys.** A redirect onto the
+  FreeBSD port's `/usr/local/etc/ssh/sshd_config`
+  passed, as did `tee` with a redirect glued to the
+  path, and `install`, `ln`, `patch` or `shred`.
+  Contributed by Julian Pawlowski (#13).
+- **SSH audits read OpenSSH 10.4 output.** Its
+  `sshd -T` prints mixed case, which two filters
+  missed. Found by Julian Pawlowski in #28 (#48).
+
 ## 2.21.0 — 2026-09-17
 
 - **The taboo guard catches writes into keys,
