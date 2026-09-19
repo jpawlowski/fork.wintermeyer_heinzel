@@ -235,14 +235,13 @@ no scattered config.
 
 ### What lives in `memory/`
 
-- `user.md` — SSH usernames, your alternative SSH
-  ports, and language preference
+- `user.md` — SSH usernames and language
+  preference
 - `blacklist.md`, `readonly.md` — access policies
 - `service-policy.md` — per-service opt-out /
   opt-in for auto-reload and auto-restart
-- `servers/<hostname>/` — per-server memory
-  (including an SSH port other than 22), changelog,
-  todo, and per-server rule overrides
+- `servers/<hostname>/` — per-server memory,
+  changelog, todo, and per-server rule overrides
 - `custom-rules/` — your global rule overrides
 - `opencode.json` — your OpenCode config
 - `network.md`, `housekeeping.md` — cross-server
@@ -295,6 +294,15 @@ Heinzel detects this automatically by comparing IP
 addresses. The first hostname becomes the canonical
 name; additional names become symlinks that share the
 same memory. Each alias can have its own SSH user.
+
+### Non-standard SSH ports
+
+A server whose sshd is not on port 22 gets its port
+in server memory, from `host:2222` or the first
+successful login. List the ports you use yourself as
+`Alternative SSH ports:` in `memory/user.md`; on a
+new host whose port 22 refuses, Heinzel tries those
+before it asks. It never scans for a port.
 
 ### Memory across sessions
 
