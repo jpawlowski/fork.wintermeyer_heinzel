@@ -10,25 +10,32 @@ PASS=0
 FAIL=0
 
 json_for() {
-  # Wrap a raw command string as PreToolUse hook input.
+  # Wrap a raw command string as PreToolUse hook input, with the
+  # permission mode $2 when given.
   if command -v jq >/dev/null 2>&1; then
-    printf '%s' "$1" \
-      | jq -Rs '{tool_name:"Bash",tool_input:{command:.}}'
+    printf '%s' "$1" | jq -Rs --arg m "${2:-}" \
+      '{tool_name:"Bash",tool_input:{command:.}}
+       + (if $m == "" then {} else {permission_mode:$m} end)'
   else
     printf '%s' "$1" | python3 -c 'import json,sys; \
-print(json.dumps({"tool_name":"Bash","tool_input":\
-{"command":sys.stdin.read()}}))'
+d={"tool_name":"Bash","tool_input":{"command":sys.stdin.read()}}; \
+m=sys.argv[1]; d.update({"permission_mode":m} if m else {}); \
+print(json.dumps(d))' "${2:-}"
   fi
 }
 
 check() {
+  # check pass|deny|ask CMD [permission mode]
   EXPECT=$1
   CMDSTR=$2
-  OUT=$(json_for "$CMDSTR" \
+  OUT=$(json_for "$CMDSTR" "${3:-}" \
     | env -u HEINZEL_GUARD_DISABLE sh "$HOOK")
   if printf '%s' "$OUT" \
     | grep -q '"permissionDecision":"deny"'; then
     GOT=deny
+  elif printf '%s' "$OUT" \
+    | grep -q '"permissionDecision":"ask"'; then
+    GOT=ask
   else
     GOT=pass
   fi
@@ -36,7 +43,7 @@ check() {
     PASS=$((PASS + 1))
   else
     FAIL=$((FAIL + 1))
-    echo "FAIL [$EXPECT, got $GOT]: $CMDSTR"
+    echo "FAIL [$EXPECT, got $GOT${3:+, mode $3}]: $CMDSTR"
   fi
 }
 
@@ -230,6 +237,54 @@ check deny 'chown -R alice:alice /home/alice/.ssh && chmod 700 /home/alice/.ssh'
 # Same reach through an interpreter, which names no key either.
 check deny "python3 -c \"import shutil; shutil.rmtree('/root/.ssh')\""
 check deny "node -e \"require('fs').chmodSync('/home/alice/.ssh', 0)\""
+
+# --- guest stop and delete: asked, not denied ------------------
+# The manager's own verb, in a mode whose prompt reaches a human.
+check ask 'pct stop 105' default
+check ask 'pct shutdown 105' default
+check ask 'ssh root@pve1 "qm stop 100 --skiplock"' default
+check ask 'qm shutdown 100' default
+check ask 'pct destroy 105' default
+check ask 'qm destroy 100 --purge' default
+check ask 'incus stop web' default
+check ask 'incus -q stop web' default
+check ask 'incus --project prod stop web' default
+check ask 'incus --project=prod delete web' default
+check ask 'lxc --force-local stop web' default
+check ask 'lxc delete -f web' default
+check ask 'virsh shutdown web' default
+check ask 'virsh destroy web' default
+check ask 'virsh --connect qemu:///system destroy web' default
+check ask 'virsh -c qemu:///system undefine web' default
+check ask 'lxc-stop -n web' default
+check ask 'lxc-destroy -n web' default
+check ask 'pct stop 105 && pct destroy 105' default
+for m in acceptEdits plan auto; do
+  check ask 'pct stop 105' "$m"
+done
+# No prompt can reach a human, or the mode is unknown: denied.
+for m in bypassPermissions dontAsk bogus ''; do
+  check deny 'pct stop 105' "$m"
+done
+# A host taboo in the same command still wins over the ask, and
+# a guest shutdown does not hide a host one next to it.
+check deny 'pct stop 105; mkfs.ext4 /dev/sda1' default
+check deny 'qm destroy 100 && reboot -f; halt' default
+check deny 'pct shutdown 105; shutdown -h now' default
+check deny 'ssh root@pve1 "qm shutdown 100 && shutdown now"' default
+# Everything else a guest manager does stays allowed.
+check pass 'pct list' default
+check pass 'pct reboot 105' default
+check pass 'qm reboot 100' default
+check pass 'lxc-stop -n web -r' default
+check pass 'incus restart web' default
+check pass 'incus exec web -- systemctl stop nginx' default
+check pass 'pct exec 105 -- rm /tmp/old.log' default
+check pass 'incus snapshot delete web snap0' default
+check pass 'pct delsnapshot 105 snap0' default
+check pass 'virsh net-destroy default' default
+check pass 'virsh vol-delete disk.qcow2 --pool default' default
+check pass 'docker stop web' default
 
 # --- same effect through an interpreter (issue #6) -------------
 # The path rules recognized a write by the way it was spelled

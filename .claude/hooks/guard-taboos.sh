@@ -2,7 +2,8 @@
 # guard-taboos.sh — PreToolUse hook (matcher: Bash).
 #
 # Mechanically enforces heinzel's absolute taboos from
-# CLAUDE.md → Critical Safety Rules, below the model layer:
+# CLAUDE.md → Critical Safety Rules, below the model layer.
+# DENIED outright:
 #
 #   - halt / poweroff / shutdown without -r / init 0 /
 #     telinit 0 / sysrq-trigger
@@ -23,6 +24,15 @@
 #   - any of the last three reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
+#
+# ASKED, not denied — the user confirms the exact command in a
+# permission prompt (see "Guest stop and delete" at the end for
+# the membership criterion and the modes that deny instead):
+#
+#   - stopping or deleting a system container or VM
+#     (pct/qm stop, shutdown or destroy, incus/lxc stop or
+#     delete, virsh shutdown/destroy/undefine, lxc-stop,
+#     lxc-destroy)
 #
 # What it deliberately does NOT scan: the body of a heredoc that
 # is written to an ordinary file by cat or tee (issue #8). That
@@ -96,7 +106,8 @@
 #
 # Being blocked is EXPECTED behavior. Explain it to the user.
 # Never rephrase, re-quote, or otherwise obfuscate a command to
-# evade this guard.
+# evade this guard. The same holds for an asked command: put it
+# to the user as it stands, rather than in another spelling.
 #
 # Heinzel-repo development note: a commit message piped straight
 # into `git commit -m`/`-F -` still flows through the command
@@ -128,6 +139,9 @@ if command -v jq >/dev/null 2>&1; then
     | jq -r '.tool_input.command // empty' 2>/dev/null) || CMD=""
 fi
 [ -n "$CMD" ] || CMD="$INPUT"
+
+# Set when a guest stop or delete was seen; decided at the end.
+GUEST_ASK=""
 
 # --- Heredoc bodies that are DATA, not code -------------------
 # Documentation is the one thing that legitimately contains taboo
@@ -340,16 +354,20 @@ hit_without() {
   return 0
 }
 
-deny() {
-  # JSON decision on stdout; blocks in all permission modes.
+decide() {
+  # $1 decision, $2 reason. JSON on stdout, then done.
   # Reasons must stay plain ASCII without quotes/backslashes.
   printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse",'
-  printf '"permissionDecision":"deny",'
-  printf '"permissionDecisionReason":"heinzel guard: %s ' "$1"
-  printf '(CLAUDE.md - Critical Safety Rules). Blocked in all '
-  printf 'permission modes. Explain this to the user; do not '
-  printf 'rephrase the command to evade the guard."}}\n'
+  printf '"permissionDecision":"%s",' "$1"
+  printf '"permissionDecisionReason":"%s"}}\n' "$2"
   exit 0
+}
+
+deny() {
+  # A taboo: blocks in all permission modes.
+  decide deny "heinzel guard: $1 (CLAUDE.md - Critical Safety \
+Rules). Blocked in all permission modes. Explain this to the \
+user; do not rephrase the command to evade the guard."
 }
 
 # The model must not disarm the guard from inside a command.
@@ -378,11 +396,43 @@ if hit 'sysrq-trigger'; then
   deny "sysrq-trigger powers off or resets the server without \
 shutting anything down cleanly"
 fi
+# Options a guest manager takes before its verb.
+GOPTS='([[:space:]]+(-c|--connect|--project)[[:space:]]+[^[:space:]]+|[[:space:]]+-[^[:space:]]+)*'
+# The shutdown verb of a guest manager (pct, qm, virsh) shuts a
+# guest down cleanly and is asked like its stop (below), so the
+# host rule reads the command with those spelled guest-shutdown.
+# Any other shutdown stays in place and is caught. If the rewrite
+# fails, the original command is checked: more blocking, not less.
+HOST_CMD=$CMD
+case $CMD in
+  *shutdown*)
+    GUEST_OFF=$(printf '%s\n' "$CMD" | sed -E \
+      "s/((^|[^[:alnum:]_.-])(pct|qm|virsh)$GOPTS[[:space:]]+)shutdown/\1guest-shutdown/g") \
+      && [ -n "$GUEST_OFF" ] && CMD=$GUEST_OFF
+    ;;
+esac
 if hit_without '(^|[^[:alnum:]_-])shutdown([^[:alnum:]_-]|$)' \
   '(^|[[:space:]])-(r|c)([[:space:]]|$)'; then
   deny "shutdown without -r powers off the server (reboots \
 use shutdown -r; -c cancels)"
 fi
+CMD=$HOST_CMD
+# A guest verb is ASKED, not denied (see the end of the file).
+# Only the manager's own verb counts: a service stopped or a file
+# deleted inside a guest through exec stays allowed, and so do
+# snapshot, image, network and storage verbs, which carry a noun
+# before theirs. The case prefilter spares every other command
+# the pipelines below.
+case $CMD in
+  *stop*|*shutdown*|*destroy*|*delete*|*undefine*)
+    if hit "(^|[^[:alnum:]_.-])((pct|qm)[[:space:]]+(stop|shutdown|destroy)|(virsh|incus|lxc)$GOPTS[[:space:]]+(stop|shutdown|destroy|delete|undefine)|lxc-destroy)([^[:alnum:]_-]|\$)" \
+      || hit_without '(^|[^[:alnum:]_.-])lxc-stop([^[:alnum:]_.-]|$)' \
+           '(^|[[:space:]])(-r|--reboot)([[:space:]]|$)'
+    then
+      GUEST_ASK=1
+    fi
+    ;;
+esac
 
 # --- Filesystem creation --------------------------------------
 if hit '(^|[^[:alnum:]_.-])mkfs(\.[[:alnum:]]+)?([^[:alnum:]_.-]|$)'
@@ -652,6 +702,52 @@ read - read it with cat, grep or sshd -T instead"
 line can overwrite the device, which destroys everything the \
 partition table points at"
   fi
+fi
+
+# --- Guest stop and delete: ask, never silently allow ----------
+# Stopping a system container or VM powers that server off and
+# deleting it destroys it, but managing guests on a host heinzel
+# administers is legitimate work. So this is the
+# hook's second tier: the user confirms the exact command in a
+# prompt. Membership is narrow on purpose — an effect earns "ask"
+# instead of "deny" only when it is routine admin work AND no
+# user-tunable policy already covers it (service restarts have
+# memory/service-policy.md, so they stay with the model).
+#
+# The prompt must reach a human. Claude Code documents "ask" as
+# forcing one in auto mode; for bypassPermissions and dontAsk it
+# documents nothing, so those deny. Measured with Claude Code
+# 2.1.267: in `claude -p` an ask is refused whatever the mode, so
+# an unattended run stops rather than hanging, and a session
+# started with --permission-mode auto reports "default" here.
+# The operator override is HEINZEL_GUARD_DISABLE, as for a taboo.
+if [ -n "$GUEST_ASK" ]; then
+  # Only this branch needs the mode, so it is read here rather
+  # than on every Bash call. No jq means no mode, hence deny.
+  MODE=""
+  if command -v jq >/dev/null 2>&1; then
+    MODE=$(printf '%s' "$INPUT" \
+      | jq -r '.permission_mode // empty' 2>/dev/null) || MODE=""
+  fi
+  case $MODE in
+    default|acceptEdits|plan|auto)
+      decide ask "heinzel guard: stopping or deleting a system \
+container or VM powers off or destroys that server. Check the \
+guest ID and the host before approving."
+      ;;
+    bypassPermissions|dontAsk|"")
+      decide deny "heinzel guard: stopping or deleting a system \
+container or VM needs a confirmation prompt, and this session \
+shows none. Not a taboo: run it in a session that asks, or let \
+the user run it. Do not rephrase the command."
+      ;;
+    *)
+      decide deny "heinzel guard: stopping or deleting a system \
+container or VM needs a confirmation prompt, and this hook does \
+not know this session's permission mode. Tell the user to update \
+guard-taboos.sh. Do not rephrase the command."
+      ;;
+  esac
 fi
 
 # No taboo matched: no decision, normal permission flow applies.

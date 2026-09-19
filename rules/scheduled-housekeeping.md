@@ -60,6 +60,9 @@ nothing left to ask.
   mode a run that hits a question it cannot answer
   idles; the timeout ends it instead of letting it
   hang until the next run.
+- Stopping or deleting a system container or VM is
+  refused in an unattended run: the taboo guard
+  asks a person for it, and nobody answers.
 
 ## Cron Environment
 
