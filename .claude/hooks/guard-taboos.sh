@@ -407,7 +407,7 @@ HOST_CMD=$CMD
 case $CMD in
   *shutdown*)
     GUEST_OFF=$(printf '%s\n' "$CMD" | sed -E \
-      "s/((^|[^[:alnum:]_.-])(pct|qm|virsh)$GOPTS[[:space:]]+)shutdown/\1guest-shutdown/g") \
+      "s/((^|[^[:alnum:]_.-])(pct|qm|virsh)${GOPTS}[[:space:]]+)shutdown/\1guest-shutdown/g") \
       && [ -n "$GUEST_OFF" ] && CMD=$GUEST_OFF
     ;;
 esac
@@ -425,7 +425,7 @@ CMD=$HOST_CMD
 # the pipelines below.
 case $CMD in
   *stop*|*shutdown*|*destroy*|*delete*|*undefine*)
-    if hit "(^|[^[:alnum:]_.-])((pct|qm)[[:space:]]+(stop|shutdown|destroy)|(virsh|incus|lxc)$GOPTS[[:space:]]+(stop|shutdown|destroy|delete|undefine)|lxc-destroy)([^[:alnum:]_-]|\$)" \
+    if hit "(^|[^[:alnum:]_.-])((pct|qm)[[:space:]]+(stop|shutdown|destroy)|(virsh|incus|lxc)${GOPTS}[[:space:]]+(stop|shutdown|destroy|delete|undefine)|lxc-destroy)([^[:alnum:]_-]|\$)" \
       || hit_without '(^|[^[:alnum:]_.-])lxc-stop([^[:alnum:]_.-]|$)' \
            '(^|[[:space:]])(-r|--reboot)([[:space:]]|$)'
     then
