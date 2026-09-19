@@ -139,196 +139,18 @@ or other hosts depend on that path (subnet router,
 WireGuard hub, lighthouse, control server):
 `rules/access-path.md` → Only one way in.
 
-### Tailscale and Headscale
+Per agent, the details are in their own file:
 
-- **Connected:** `BackendState` `Running` and
-  `"Online": true` (in `Self`, reached the control
-  server). `NeedsLogin`, `NeedsMachineAuth` (waits for
-  approval), `Stopped` (`tailscale down`), or
-  `"Expired": true`: not connected. Addresses:
-  `tailscale ip`.
-- **Expiry:** `KeyExpiry` (in `Self`); none on a server
-  with key expiry disabled in the admin console.
-- **Control server:** the same client works with
-  Tailscale's hosted one or a self-hosted Headscale.
-  `ControlURL` `https://controlplane.tailscale.com` or
-  `https://login.tailscale.com` is Tailscale's, with
-  the policy in its admin console. Anything else is
-  self-hosted; check from the workstation (no SSH):
-
-  ```bash
-  curl -fsS <ControlURL>/health
-  curl -fsS <ControlURL>/version
-  ```
-
-  `{"status":"pass"}` is Headscale; `/version` (0.26
-  and newer) gives its version. No answer: ask the
-  user what runs there.
-- **Headscale:** the policy is on its server
-  (`headscale policy get`, or the file named by
-  `policy.path`); when that server is in
-  `memory/servers/`, heinzel reads it there, with that
-  host's own onboarding. SSH check mode and
-  `localpart:` users need Headscale 0.29 or newer.
-  While it is down, logged-in nodes keep their
-  connections for a while, but new logins, key
-  renewals and policy changes stop.
-- **Routes:** an `AdvertiseRoutes` list makes the host
-  a subnet router (`0.0.0.0/0` and `::/0`: exit node).
-- **`OperatorUser`** may change the agent's settings
-  without root, SSH included.
-
-### NetBird
-
-- **Connected:** `Management: Connected` and `Signal:
-  Connected`; `Peers count: 3/5 Connected` shows how
-  many peers are reachable. `Daemon status:
-  NeedsLogin`, `LoginFailed` or `SessionExpired`: not
-  connected. Address: `NetBird IP`.
-- **Expiry:** `Session expires`, for peers logged in
-  through SSO with login expiration on.
-- **Management:** the server whose dashboard holds the
-  policy.
-- **Keys:** the JSON state files hold the WireGuard
-  private key (see NetBird SSH for the grep).
-
-### WireGuard
-
-Plain `wg-quick`, systemd-networkd, NetworkManager,
-and tools built on it (wg-easy, Netmaker, Firezone).
-With root:
-
-```bash
-wg show
-```
-
-- `wg show` prints peers, endpoints, allowed IPs and
-  the last handshake, and hides the keys. Other `wg`
-  subcommands and output modes may print them: use
-  only plain `wg show`.
-- **Connected:** WireGuard has no such state;
-  `latest handshake` says when traffic last flowed.
-  Without `persistent keepalive`, an old handshake
-  only means no recent traffic. No expiry.
-- **Keys:** `/etc/wireguard/*.conf` (`PrivateKey`),
-  systemd-networkd `*.netdev`, NetworkManager
-  connections. Own address: `ip addr`.
-- **Policy:** each peer's `AllowedIPs` and the host
-  firewall; Netmaker and Firezone keep theirs on their
-  server.
-- **Hub:** a peer every host has, with a fixed
-  endpoint.
-
-### ZeroTier
-
-With root (`zerotier-cli` needs the auth token):
-
-```bash
-zerotier-cli info
-zerotier-cli listnetworks
-```
-
-- **Connected:** `info` says `ONLINE` (`TUNNELED`:
-  online over the TCP relay, slow), and the network's
-  status in `listnetworks` is `OK`. `ACCESS_DENIED`
-  (not authorized on the controller), `NOT_FOUND`,
-  `REQUESTING_CONFIGURATION`,
-  `AUTHENTICATION_REQUIRED`: not connected.
-- **Expiry:** only with single sign-on: `AUTH OK,
-  expires in: …` or `AUTH EXPIRED`.
-- **Controller:** the first 10 hex digits of the
-  network ID are the controller's node address. Equal
-  to this node's own address, or a `controller.d`
-  directory in the ZeroTier home: this host is a
-  self-hosted controller. Otherwise my.zerotier.com or
-  another self-hosted one (ztncui, zero-ui): ask. Flow
-  rules and member authorization live only there.
-- **Keys:** `identity.secret` and `authtoken.secret`
-  in `/var/lib/zerotier-one` (FreeBSD
-  `/var/db/zerotier-one`, macOS
-  `/Library/Application Support/ZeroTier/One`).
-
-### Nebula
-
-Config usually `/etc/nebula/config.yml` (the service
-passes `-config`); Defined Networking's managed client
-is `dnclient` with its state in `/var/lib/defined`.
-With root (`nebula-cert` may be missing where only
-`nebula` is installed; then ask for the dates):
-
-```bash
-nebula-cert print -path /etc/nebula/host.crt
-sed -n '/^lighthouse:/,/^[a-z]/p; /^sshd:/,/^[a-z]/p' \
-  /etc/nebula/config.yml
-```
-
-- **Connected:** no status command; the logs say
-  whether handshakes succeed.
-- **Expiry:** `notAfter` of the host certificate, and
-  of `ca.crt`. Expired: the host drops out.
-- **Certificate:** name, networks (own address),
-  groups. **Lighthouses:** `am_lighthouse`, `hosts`.
-- **Policy:** `firewall.inbound` and
-  `firewall.outbound` in the config, by Nebula group.
-- **Keys:** `pki.key` (`host.key`), `sshd.host_key`;
-  print only the blocks above.
-- **Admin console:** `sshd.enabled` (off by default)
-  starts an SSH console on `sshd.listen` (never port
-  22) for `authorized_users`. It controls Nebula
-  itself, it is no login shell; when on, record who
-  may use it.
-
-### Pangolin (Newt)
-
-Newt connects a site to a Pangolin server (reverse
-proxy and VPN); it runs as a process or container,
-without its own unit. Its WireGuard is in userspace
-unless started `--native`.
-
-- **Connected:** no status command; its log says.
-- **Config:** `~/.config/newt-client/config.json` of
-  the account that runs it, `CONFIG_FILE`, or
-  `--config-file`. `newt --show-config` masks the
-  secret; the file and a `--secret` argument do not.
-- **SSH:** on unless `--disable-ssh` (`DISABLE_SSH`,
-  `disableSsh`), see "SSH servers in agents". Its auth
-  daemon **creates local accounts** (`useradd`) and
-  sudo rules (`/etc/sudoers.d/90-pangolin-<user>`;
-  sudo skips the file when the name has a dot, so
-  `jane.doe` gets no sudo), and writes the CA it admits
-  to `/etc/ssh/ca.pem`.
-  Pangolin, not heinzel, manages those accounts. With
-  `newt` running, a `trustedusercakeys /etc/ssh/ca.pem`
-  in sshd makes Pangolin the user CA for sshd too; the
-  path alone proves nothing.
-
-### Cloudflare Tunnel
-
-`cloudflared` connects outbound to Cloudflare and
-publishes local services; no interface, no VPN
-address.
-
-- **Connected:** no status command; its log says.
-- **Config:** `/etc/cloudflared`, `~/.cloudflared` or
-  `/usr/local/etc/cloudflared`; a tunnel managed from
-  the dashboard has its routes there, not on the host.
-- **Ways in:** an ingress `service: ssh://…` publishes
-  sshd; Cloudflare Access (browser SSH, short-lived
-  certificates) decides who reaches it. The host
-  firewall does not see it: the connection is
-  outbound.
-
-  ```bash
-  grep -Hn 'ssh://' /etc/cloudflared/*.y*ml \
-    /usr/local/etc/cloudflared/*.y*ml \
-    ~/.cloudflared/*.y*ml 2>/dev/null
-  ```
-
-- **Keys:** `cert.pem`, the tunnel's `<UUID>.json`,
-  and the token. A token count above 0 in the probe:
-  the token is in `ps` for every account → move it
-  into a token file (`rules/secrets.md` → Never Pass
-  Secrets on the Command Line).
+- `rules/mesh-vpn-tailscale.md` — Tailscale and
+  Headscale, Tailscale SSH
+- `rules/mesh-vpn-netbird.md` — NetBird, NetBird SSH
+- `rules/mesh-vpn-wireguard.md` — WireGuard, wg-easy,
+  Netmaker, Firezone
+- `rules/mesh-vpn-zerotier.md` — ZeroTier
+- `rules/mesh-vpn-nebula.md` — Nebula, Defined
+  Networking
+- `rules/mesh-vpn-pangolin.md` — Pangolin's Newt
+- `rules/mesh-vpn-cloudflare.md` — Cloudflare Tunnel
 
 ## SSH servers in agents
 
@@ -356,78 +178,6 @@ decided by a policy **outside the host**.
   address is Tailscale's with `RunSSH` on; otherwise
   to sshd.
 
-### Tailscale SSH
-
-`tailscale set --ssh`; on in the probe:
-`"RunSSH": true` (since 1.100 also `tailscale get
-ssh`). Linux, and macOS with the open-source
-`tailscaled` only: the App Store and standalone apps
-cannot serve SSH. Who: tailnet identity plus the `ssh`
-rules (accept or check) of the policy file.
-
-The rules that apply to this node arrive compiled
-with its network map (root):
-
-```bash
-T=$(printf '\t')
-tailscale debug netmap 2>&1 \
-  | sed -n "/^$T\"SSHPolicy\": null/p; /^$T\"SSHPolicy\": {/,/^$T}/p"
-```
-
-The format is internal to Tailscale and may change;
-read it, do not build on it. Each rule has:
-
-- `principals`: `userLogin` (a person), `nodeIP` (a
-  device, also tagged ones) or `any: true` (everyone
-  on the tailnet).
-- `sshUsers`: requested account → local account.
-  `"root": "root"` admits root; `"*": "="` admits every
-  account by its own name, root included unless the
-  map also has `"root": ""` (how `autogroup:nonroot`
-  arrives; an empty value never matches).
-- `action`: `accept: true` is accept mode;
-  `holdAndDelegate` (a URL) is check mode — the person
-  confirms with the identity provider again first.
-  `recorders` means sessions are recorded.
-
-`SSHPolicy: null` with `RunSSH` on: no rule admits
-anyone to this node. Group names and a check rule's
-`checkPeriod` stay with the control server.
-
-### NetBird SSH
-
-`netbird up --allow-server-ssh` (0.61 or newer for the
-current model); on in the probe: `SSH Server:
-Enabled`. Who: OIDC login (JWT) plus the access policy
-in the dashboard, which reaches the host only as
-hashes. Flags, root:
-
-```bash
-grep -rHE --include='*.json' \
-  '"(ServerSSHAllowed|EnableSSH[A-Za-z]*|DisableSSHAuth)"' \
-  /var/lib/netbird /var/db/netbird /etc/netbird 2>/dev/null
-```
-
-The active profile is the file of the `Profile:` line
-(`default.json` for `default`); `/var/db/netbird` is
-FreeBSD, `/etc/netbird/config.json` older clients.
-
-- `ServerSSHAllowed: true` without anyone turning it
-  on: a config from before the setting existed is
-  switched on at upgrade.
-- `EnableSSHRoot: true`: admits `root`.
-- `DisableSSHAuth: true`: no OIDC login; any peer the
-  network policy lets through gets in, with no person
-  behind the login.
-- SFTP and port forwarding: allowed where `true`.
-- **Client side:** the NetBird client writes
-  `/etc/ssh/ssh_config.d/99-netbird.conf`, a `Match`
-  block for peer names with `StrictHostKeyChecking no`
-  and a `ProxyCommand netbird ssh proxy` that checks
-  the peer's host key against NetBird's management
-  instead. `stricthostkeychecking no` there is not the
-  "any host key accepted" finding.
-
 ### Where the policy is
 
 heinzel sees the compiled Tailscale rules (root) and
@@ -441,23 +191,9 @@ user.
 
 ### Who logged in
 
-- **Tailscale** (Linux, root):
-
-  ```bash
-  journalctl -u tailscaled --since "7 days ago" \
-    --no-pager -q | grep 'access granted to'
-  ```
-
-  Each line names the tailnet login and the local
-  account (`ssh-user "root"`).
-- **NetBird:** `netbird status -d` lists the open
-  sessions (local account, JWT user, source). Past
-  logins, root: `grep -e 'SSH auth' -e 'SSH connection
-  from NetBird peer' /var/log/netbird/client.log` (the
-  second is the only line without OIDC; a `--log-file`
-  on the service's command line wins).
-- **Newt:** its own output (container or process
-  log); heinzel has no probe for it.
+In each agent's file. These logins are missing from
+`last`, the sshd log and the activity check's sshd
+lines.
 
 ### heinzel's own login
 
@@ -465,12 +201,8 @@ When heinzel came in on an agent's SSH server, then:
 
 - keys, certificates and `sshd_config` play no part;
   a `Permission denied` means the policy, not the key.
-- **Tailscale check mode** prints a URL and waits
-  until the user confirms in a browser. The shared
-  connection (`CLAUDE.md` → SSH Options) is then
-  reused for its lifetime.
-- **NetBird with OIDC** needs a browser login through
-  the NetBird client; `BatchMode` cannot do it.
+- The agent's own conditions (Tailscale check mode,
+  NetBird OIDC) are in its file.
 - To reach sshd, use the host's other address.
 
 ### Changing it
@@ -479,13 +211,7 @@ Turning an agent's SSH server on or off opens or
 closes a way in: ask first, and keep another way in
 (`rules/access-path.md` → Only one way in).
 
-- `tailscale set --ssh=false`, and a restart of
-  `tailscaled`, end every Tailscale SSH session.
-- NetBird: `netbird down`, then `netbird up
-  --allow-server-ssh=false`; the VPN is down
-  meanwhile.
-- Newt: `--disable-ssh` and a restart; the tunnel is
-  down meanwhile.
+The commands per agent are in its file.
 
 ## Security audit
 

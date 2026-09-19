@@ -173,7 +173,8 @@ mysqladmin status 2>/dev/null \
 
 Triggered by a `Mesh VPN:` line, or WireGuard, in `memory.md`.
 Run `rules/mesh-vpn.md` → Probe, and `wg show` (root) for
-WireGuard; read each agent's Connected and Expiry there.
+WireGuard; read Connected and Expiry in the agent's file
+(`rules/mesh-vpn.md` → Agents).
 
 - **WARN** if an agent is not connected, or its login or
   certificate expires within 7 days (**CRITICAL** where the

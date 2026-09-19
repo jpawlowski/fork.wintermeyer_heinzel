@@ -196,9 +196,10 @@ Highlight as drift:
 Which hosts are in which mesh VPN, whether it is connected,
 expiry, and the SSH servers some agents bring, a way in the sshd
 rows do not show. Run `rules/mesh-vpn.md` → Probe unchanged
-(no root), then the root parts of its Tailscale SSH and NetBird
-SSH sections, only where that SSH server is on. This section
-runs its own root check:
+(no root), then the root parts of `rules/mesh-vpn-tailscale.md`
+and `rules/mesh-vpn-netbird.md` → Tailscale SSH / NetBird SSH,
+only where that SSH server is on. This section runs its own
+root check:
 
 ```bash
 # After the rule's probe, which sets P (Tailscale prefs).
@@ -239,7 +240,7 @@ disappears; `-` marks "no privilege path".
 No output: no agent on the host. The counts under
 `tailscale-rules` only hint at the rules (`"root": ""` keeps root
 out of a `"*": "="` rule); read the whole block
-(`rules/mesh-vpn.md`) on a host that stands out. NetBird flags
+(`rules/mesh-vpn-tailscale.md`) on a host that stands out. NetBird flags
 count only from the active profile's file.
 
 Row keys:
