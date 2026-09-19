@@ -235,19 +235,25 @@ fi
 [ -f "$MEM/user.md" ] || die "memory/user.md missing: set up SSH users first (rules/ssh-user.md)"
 
 # IPv4 addresses of a name; an address resolves to itself.
+# The system resolver first, as ssh uses it: it knows the
+# search domain, /etc/hosts and a VPN's own resolver, and
+# dig knows none of them, so a short name like "host01"
+# resolves for ssh and not for dig. dig stays the fallback.
 resolve() {
   if printf '%s' "$1" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
     echo "$1"; return
   fi
-  if command -v dig >/dev/null 2>&1; then
-    dig +short +time=2 +tries=1 A "$1" 2>/dev/null \
-      | grep -E '^[0-9]+(\.[0-9]+){3}$'
+  if command -v getent >/dev/null 2>&1; then
+    getent ahostsv4 "$1" 2>/dev/null | awk '{print $1}' | sort -u
   elif command -v python3 >/dev/null 2>&1; then
     python3 - "$1" 2>/dev/null <<'EOP'
 import socket, sys
 for a in sorted({i[4][0] for i in socket.getaddrinfo(sys.argv[1], None, socket.AF_INET)}):
     print(a)
 EOP
+  elif command -v dig >/dev/null 2>&1; then
+    dig +short +time=2 +tries=1 A "$1" 2>/dev/null \
+      | grep -E '^[0-9]+(\.[0-9]+){3}$'
   fi
 }
 
