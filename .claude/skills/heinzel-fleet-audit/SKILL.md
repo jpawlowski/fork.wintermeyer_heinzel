@@ -117,6 +117,10 @@ Read on demand:
 
 ## Scope and limits
 
+- **Several hosts at once:** the audit reaches only hosts
+  `bin/heinzel-fanout` accepts, so blacklisted, not yet
+  onboarded and moved hosts appear as skipped, not
+  audited (`rules/multi-host.md`).
 - Linux (Debian family) is fully covered. RHEL/SUSE
   probes share the same shape but use `dnf`/`firewalld`/
   `zypper` equivalents. macOS hosts are skipped with a
