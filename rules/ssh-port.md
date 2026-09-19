@@ -134,7 +134,12 @@ Behind a port forward, one address can reach
 several hosts: `gw.example.com:2201` and
 `gw.example.com:2202` are two machines. For alias
 detection (`rules/dns-aliases.md`) a match needs the
-same address **and** the same SSH port.
+same address **and** the same SSH port. A host's port
+is the one the user named, else its `- SSH port:`
+line, else the `port` line of `ssh -G <name>`, which
+covers a `Port` in `~/.ssh/config` and opens no
+connection. Detection already runs it for the new
+name.
 
 If the user named no port for the new name and the
 address matches known hosts with a stored port, the
