@@ -15,7 +15,7 @@ Many checks in this audit work without root:
 - **Needs root:** `sshd -T`, empty password accounts
   (`/etc/shadow`), listening services with process names on Linux
   (`ss -tulnp`), cron directory permissions (some dirs may be
-  unreadable), `ip6tables` / `nft` rulesets for the IPv6
+  unreadable), `nft` / `iptables` rulesets for the IPv6
   coverage check (`/etc/default/ufw` is world-readable).
 
 If a check cannot be performed due to missing privileges, do not

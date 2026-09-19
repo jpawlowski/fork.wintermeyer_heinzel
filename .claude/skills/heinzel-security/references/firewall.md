@@ -53,18 +53,43 @@ grep '^IPV6=' /etc/default/ufw
 **firewalld:** filters both families in one ruleset.
 No extra check.
 
-**Plain iptables or nftables** (no ufw, no
-firewalld):
+**Neither ufw nor firewalld:** first find out which
+kernel framework the `iptables` command writes to:
 
 ```bash
-iptables -S INPUT | head -1
-ip6tables -S INPUT | head -1
-nft list tables
+iptables -V
 ```
 
-A `-P INPUT DROP` for IPv4 next to `-P INPUT ACCEPT`
-for IPv6, or nftables tables only of family `ip` (no
-`ip6`, no `inet`), is the same gap.
+- `(nf_tables)`, or no `iptables` at all: nftables
+  holds every rule, including those added through
+  the `iptables` command. `iptables -S` shows only
+  the latter and misses native rules from
+  `/etc/nftables.conf`, so read nftables directly:
+
+  ```bash
+  nft list chains | grep -E '^table|hook input'
+  ```
+
+  IPv6 is filtered when a chain with `hook input`
+  sits in a table of family `inet` or `ip6` and has
+  `policy drop` (or ends in a drop/reject rule — then
+  check its rules with `nft list chain <family>
+  <table> <chain>`). Input chains only in family `ip`
+  are the gap.
+- `(legacy)`: the old framework, invisible to `nft`.
+  Compare the policies of both families:
+
+  ```bash
+  iptables -S INPUT | head -1
+  ip6tables -S INPUT | head -1
+  ```
+
+  `-P INPUT DROP` for IPv4 next to `-P INPUT ACCEPT`
+  for IPv6 is the gap.
+
+No input chain in any family means no inbound
+filtering at all — report that under "No active
+firewall" above, not here.
 
 - Global IPv6 address and the gap above →
   **CRITICAL** "Firewall does not filter IPv6"
