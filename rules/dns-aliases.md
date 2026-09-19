@@ -14,19 +14,31 @@ When connecting to a hostname with no
 `memory/servers/<hostname>/` directory (and not a
 symlink):
 
-1. **Resolve the IP(s) the way `ssh` does.** Ask
-   the system resolver, not DNS directly: only it
-   sees `/etc/hosts`, the search domain and the
-   resolvers a VPN adds per domain (macOS scoped
-   resolvers, systemd-resolved split DNS). Collect
-   every IPv4 address, not just the first. On
-   Linux:
+1. **Resolve the IP(s) the way `ssh` does.** First
+   apply the SSH client config: a `Host` alias in
+   `~/.ssh/config` can point anywhere through
+   `HostName`. `ssh -G` prints the name ssh will
+   really connect to, without connecting:
+   ```
+   ssh -G <hostname> 2>/dev/null | \
+     awk '$1=="hostname"{print $2}'
+   ```
+   Resolve that name. Ask the system resolver, not
+   DNS directly: only it sees `/etc/hosts`, the
+   search domain and the resolvers a VPN adds per
+   domain (macOS scoped resolvers, systemd-resolved
+   split DNS). Collect every IPv4 address, not just
+   the first. On Linux:
    ```
    getent ahostsv4 <hostname> | \
      awk '{print $1}' | sort -u
    ```
-   Where `getent` is missing or does not know
-   `ahostsv4` (macOS, FreeBSD), use `getaddrinfo`:
+   On macOS:
+   ```
+   dscacheutil -q host -a name <hostname> | \
+     awk '$1=="ip_address:"{print $2}' | sort -u
+   ```
+   Elsewhere (FreeBSD), use `getaddrinfo`:
    ```
    python3 - <hostname> <<'EOF'
    import socket, sys
