@@ -356,6 +356,14 @@ Read `rules/os-detection.md`. Before doing any work
 on a server, you **must** detect its OS and create a
 server memory file.
 
+## Platform Rules
+
+Appliances (Proxmox VE, OPNsense, pfSense, Home
+Assistant OS) get a platform file, found by
+`rules/os-detection.md` step 5 and recorded as
+`Platform:` in server memory. It wins over the
+family file and over Expected Software.
+
 ## Activity Check
 
 Read `rules/activity-check.md`. On every connection,

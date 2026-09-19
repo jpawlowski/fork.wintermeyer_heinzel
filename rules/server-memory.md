@@ -13,6 +13,9 @@ overrides — see CLAUDE.md → Rule Overrides).
 - IP: 203.0.113.10
 - OS: Debian 12 (Bookworm)
 - Distro family: debian
+- Platform: Proxmox VE <version> (only when
+  rules/os-detection.md found one)
+- Shell: bash (root)
 - CPU: 4x Intel Xeon E-2236 @ 3.40GHz
 - RAM: 16 GB
 - Disk: 80 GB (/ ext4, 45% used)

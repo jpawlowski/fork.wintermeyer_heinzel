@@ -39,6 +39,10 @@ per-host fixes, or manual edits with explicit user approval).
 Do NOT auto-invoke for generic phrases like "check my
 servers" — that maps to single-host housekeeping.
 
+Hosts with a `Platform:` line in memory are compared only
+with hosts of the same platform, as that platform file's
+"Housekeeping and Audits" section says.
+
 ## Workflow
 
 1. **Discover hosts.** List directories under

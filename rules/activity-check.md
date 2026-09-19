@@ -69,6 +69,11 @@ Note: this shows the last 20 matches, not a strict
 (`messages.0`). Older rotated logs are usually
 compressed; mention the limitation if relevant.
 
+**Platforms:** on a host with a `Platform:` line in
+memory, the platform file's `## Logs` section says
+where heinzel's entries land and how to read them
+back.
+
 If the command returns nothing — and it actually ran,
 and journal visibility is not limited (see above) —
 skip silently: no activity to report.

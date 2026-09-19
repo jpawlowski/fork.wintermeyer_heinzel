@@ -75,6 +75,9 @@ Read on demand, only when the relevant section applies:
   WireGuard. Only run the ones the server's `memory.md` mentions.
 - `references/unprivileged.md` — which checks work without root
   and how to report skipped ones.
+- The platform file named by `Platform:` in server memory —
+  its "Housekeeping and Audits" section replaces the baseline
+  checks it names.
 
 ## Scope and limits
 

@@ -93,5 +93,8 @@ Read on demand, only when the relevant section applies:
   SUID/SGID audit, /tmp mount options, cron perms, unowned files.
 - `references/intrusion-prevention.md` — fail2ban status.
 - `references/macos-security.md` — SIP, FileVault, Gatekeeper.
+- The platform file named by `Platform:` in server memory —
+  its "Housekeeping and Audits" section replaces the baseline
+  checks it names.
 - `references/unprivileged.md` — which checks work without root,
   which need it, and how to report skipped ones.

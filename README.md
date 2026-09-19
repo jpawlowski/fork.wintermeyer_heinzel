@@ -842,6 +842,17 @@ log show \
 | macOS   | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
 | FreeBSD | FreeBSD (all versions)            | `rules/freebsd.md` |
 
+Appliances get a platform file on top of the base
+file, because they generate parts of the system
+themselves:
+
+| Platform          | Base    | Platform file       |
+| ----------------- | ------- | ------------------- |
+| Proxmox VE        | Debian  | `rules/proxmox.md`  |
+| OPNsense          | FreeBSD | `rules/opnsense.md` |
+| pfSense           | FreeBSD | `rules/pfsense.md`  |
+| Home Assistant OS | —       | `rules/haos.md`     |
+
 Other distributions work too — Heinzel will apply
 general best practices and let you know which OS it
 detected.
@@ -956,6 +967,10 @@ rules/                 — Upstream rule files (git-tracked)
   suse.md              — openSUSE & SLES rules
   macos.md             — macOS rules
   freebsd.md           — FreeBSD rules
+  proxmox.md           — Proxmox VE overlay (on debian.md)
+  opnsense.md          — OPNsense overlay (on freebsd.md)
+  pfsense.md           — pfSense overlay (on freebsd.md)
+  haos.md              — Home Assistant OS rules
   efi-boot.md          — EFI boot management & dual-boot
   cloud-image.md       — Cloud image deployment
   dual-boot.md         — Dual-boot setup workflow

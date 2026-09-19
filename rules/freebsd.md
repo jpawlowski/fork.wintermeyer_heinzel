@@ -192,6 +192,13 @@ Rules for FreeBSD (all versions).
   compatible at the pool level, but mixing is not
   recommended for root pools.
 
+## Login Shell
+
+root's shell is sh only on installs from 14.0 on;
+upgraded systems keep csh. `rules/os-detection.md`
+step 1 records the shell and says how to handle
+csh.
+
 ## Console Configuration
 
 The correct `console` setting in `/boot/loader.conf`
