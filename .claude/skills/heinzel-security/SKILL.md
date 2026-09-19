@@ -81,9 +81,11 @@ Read on demand, only when the relevant section applies:
   severity rules (CRITICAL / WARN / INFO).
 - `references/ssh.md` — SSH password auth, root login, weak
   algorithms, MaxAuthTries, X11Forwarding (Linux and macOS).
-- `references/firewall.md` — Linux (ufw / firewalld / native
-  nftables, legacy iptables rules, Docker published ports) and
-  macOS (Application Firewall).
+- `references/firewall.md` — Linux (ufw / firewalld) and macOS
+  (Application Firewall).
+- `references/firewall-nftables-docker.md` — native nftables without
+  ufw or firewalld, iptables-legacy rules next to nf_tables,
+  Docker ports published past the firewall.
 - `references/user-accounts.md` — empty passwords, multiple UID
   0, system accounts with login shells.
 - `references/listening-services.md` — audit `ss` / `lsof`

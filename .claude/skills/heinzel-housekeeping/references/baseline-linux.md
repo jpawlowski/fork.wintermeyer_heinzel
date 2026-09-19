@@ -209,7 +209,13 @@ Check that the firewall is still active.
 ufw status
 ```
 
-**RHEL/CentOS/Fedora/SUSE (firewalld):**
+**RHEL/CentOS/Fedora (firewalld):**
+
+```bash
+firewall-cmd --state
+```
+
+**SUSE (firewalld):**
 
 ```bash
 firewall-cmd --state
@@ -224,11 +230,22 @@ nft list chains | grep -B1 -e ^table -e "hook input"
 ```
 
 Default deny as in `heinzel-security` →
-`references/firewall.md` → Native nftables.
+`references/firewall-nftables-docker.md`. Input chains that
+fail2ban or Docker add with `policy accept;` are not a
+firewall.
 
-- **CRITICAL** if none of ufw, firewalld or nftables filters
-  incoming traffic (input chains of fail2ban or Docker with
-  `policy accept;` do not count)
+**Docker** (when `command -v docker` finds it):
+
+```bash
+docker ps --format '{{.Names}} {{.Ports}}'
+```
+
+- **WARN** for each published port (`->`) not bound to
+  `127.0.0.1` or `[::1]` — Docker routes it past ufw and
+  firewalld. OK if a `DOCKER-USER` rule restricts it (same
+  reference).
+
+- **CRITICAL** if the firewall is inactive or not installed
 
 ## Failed systemd Units
 

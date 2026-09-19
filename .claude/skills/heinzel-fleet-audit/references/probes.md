@@ -113,6 +113,21 @@ available — otherwise emit the sentinel. Never let a
 permission error degrade to `tool=none`: that fabricates
 "no firewall" on a host whose firewall is simply unreadable.
 
+Classify the tool in this order, first match wins:
+
+1. `ufw` when `ufw status` says `Status: active`
+2. `firewalld` when `firewall-cmd --state` says `running`
+3. `nftables` when `nftables.service` is `active`, or an
+   input chain in the `--nft` block drops by default
+4. `none` — nothing of the above. The `nft` binary alone
+   is not a firewall, nor are input chains that fail2ban,
+   Docker or kube-proxy add with `policy accept;`.
+
+Default deny for `nftables`, and what the two counts in
+the `--legacy` block mean: `heinzel-security` →
+`references/firewall-nftables-docker.md`. No count means
+no legacy table.
+
 ```bash
 if [ "$(id -u)" = "0" ]; then
   SUDO=""
@@ -121,6 +136,7 @@ elif sudo -n true 2>/dev/null; then
 else
   SUDO="-"
 fi
+# Prefer ufw on Debian/Ubuntu; firewall-cmd on RHEL family.
 TOOLS=""
 for t in ufw firewall-cmd nft; do
   command -v "$t" >/dev/null 2>&1 && TOOLS="$TOOLS $t"
@@ -154,35 +170,16 @@ fi
 (`$SUDO` is intentionally unquoted so an empty value
 disappears; `-` marks "no privilege path".)
 
-Classify the tool in this order, first match wins:
-
-1. `ufw` when `ufw status` says `Status: active`
-2. `firewalld` when `firewall-cmd --state` says `running`
-3. `nftables` when `nftables.service` is `active`, or an
-   input chain in the `--nft` block drops by default
-4. `none` — nothing of the above. The `nft` binary alone
-   is not a firewall, nor are input chains that fail2ban,
-   Docker or kube-proxy add with `policy accept;`.
-
-Default deny for `nftables`: an input chain with
-`policy drop;`, or a final drop/reject rule (details in
-`heinzel-security` → `references/firewall.md`).
-
-The two counts in the `--legacy` block are legacy
-iptables rules next to nf_tables (`heinzel-security` →
-`references/firewall.md` → Mixed frameworks); no count
-means no legacy table.
-
 Row keys for the table:
 
 - Tool in use (`ufw` / `firewalld` / `nftables` / `none`)
 - State — `unknown(needs-root)` when a tool exists but
   its status is unreadable without root
+- Legacy iptables rules next to nf_tables (count; > 0 is
+  a WARN — `nft` does not show them)
 - Default policy (deny incoming required)
 - Number of open ports / services
 - Whether 22/tcp is open (must be yes)
-- Legacy iptables rules next to nf_tables (count; > 0 is
-  a WARN — `nft` does not show them)
 
 Highlight as drift:
 

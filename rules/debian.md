@@ -159,7 +159,7 @@ third-party PPAs.
   with `flush ruleset` — starting, reloading or
   stopping it wipes ufw's rules. A host that runs it
   needs no ufw on top. Checks: `heinzel-security` →
-  `references/firewall.md`.
+  `references/firewall-nftables-docker.md`.
 
 ## Automatic Security Updates
 
