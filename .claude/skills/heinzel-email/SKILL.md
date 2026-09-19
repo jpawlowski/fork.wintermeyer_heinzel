@@ -354,8 +354,9 @@ the only root-privileged operation in the workflow.
    a glance that the mailbox is not monitored:
 
    - Remote path: `<sending-host-fqdn>` is the `- FQDN:`
-     line in the server's `memory.md`, else the directory
-     name under `memory/servers/<host>/`.
+     line in the server's `memory.md`; if it is missing
+     or `none`, the directory name under
+     `memory/servers/<host>/`.
    - Local path: `<sending-host-fqdn>` is the workstation's
      FQDN (`hostname -f`, fall back to `hostname`).
 
@@ -579,8 +580,7 @@ absence means "ask next time".
                                      # (global default in memory/user.md;
                                      # absent = "Viele Grüße / Heinzel")
 - From: <mailbox>                    # per-host From override
-                                     # (default: noreply@<FQDN>,
-                                     # else noreply@<host>)
+                                     # (default: noreply@<sending-host-fqdn>)
 - Reply-To: <addr>                   # per-host Reply-To override
                                      # (global default in memory/user.md)
 ```

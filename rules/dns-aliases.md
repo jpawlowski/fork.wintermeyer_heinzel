@@ -61,8 +61,9 @@ symlink):
      print(socket.getaddrinfo('<hostname>', None, \
      flags=socket.AI_CANONNAME)[0][3])"
    ```
-   If neither passes, leave the field out. `- FQDN:`
-   never renames the directory.
+   If neither passes, write `- FQDN: none` so later
+   connections do not probe again. `- FQDN:` never
+   renames the directory.
 
 ## Subsequent Connections via Alias
 
@@ -91,14 +92,14 @@ When the user names a host without a dot, scan
 `- FQDN:` lines whose first label equals that name,
 ignoring case. If more than one server matches,
 list their FQDNs and ask which is meant before
-resolving or connecting. Then connect by the chosen
-FQDN, not the short name: the short name may
-resolve to the other server.
+resolving or connecting. Then use that server's
+directory and connect by its FQDN; the short name
+may resolve elsewhere.
 
-A known server whose `memory.md` has no `- FQDN:`
-line gets one on its next connection, with the
-probe and test from Detection step 4. Until then
-this check cannot see it.
+A server whose `memory.md` has no `- FQDN:` line
+gets one on its next connection: add `hostname -f`
+to the activity check's call and apply the test
+from Detection step 4.
 
 ## Removing an Alias
 
