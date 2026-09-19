@@ -91,7 +91,14 @@ When the user names a host without a dot, scan
 `- FQDN:` lines whose first label equals that name,
 ignoring case. If more than one server matches,
 list their FQDNs and ask which is meant before
-resolving or connecting.
+resolving or connecting. Then connect by the chosen
+FQDN, not the short name: the short name may
+resolve to the other server.
+
+A known server whose `memory.md` has no `- FQDN:`
+line gets one on its next connection, with the
+probe and test from Detection step 4. Until then
+this check cannot see it.
 
 ## Removing an Alias
 
