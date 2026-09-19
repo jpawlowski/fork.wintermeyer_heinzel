@@ -50,12 +50,19 @@ and fight for the same role.
 - **DNS resolver:** unbound, bind9 (RPM: `bind`),
   dnsmasq, pdns-recursor, knot-resolver,
   systemd-resolved
-- **Firewall manager:** ufw, firewalld. This class
-  covers *frontends* only. Raw `nftables` and
-  `iptables` are backends that ufw and firewalld
-  sit on top of — do not list them as class
-  members. FreeBSD's pf and ipfw are in base, no
-  frontend packages compete.
+- **Firewall manager:** ufw, firewalld, and native
+  nftables (`nftables.service` with
+  `/etc/nftables.conf`, Debian's default). The
+  nftables *package* has Debian priority `important`
+  and sits on most hosts unused, so native nftables
+  counts as a member only when
+  `systemctl is-enabled nftables` says `enabled`.
+  Debian's stock `/etc/nftables.conf` starts with
+  `flush ruleset`, and the unit's stop runs it too:
+  every start, reload or stop of that service wipes
+  the rules of ufw or firewalld. Raw `iptables` is a
+  backend, not a member. FreeBSD's pf and ipfw are in
+  base, no frontend packages compete.
 - **Container runtime:** docker.io, docker-ce,
   moby-engine, podman, containerd.io
 
@@ -92,6 +99,9 @@ dpkg-query -W \
   docker.io docker-ce podman containerd.io \
   2>/dev/null | awk '$1=="installed"{print $2}'
 ```
+
+Then, for the firewall class:
+`systemctl is-enabled nftables 2>/dev/null`.
 
 **RHEL / Fedora / SUSE**
 

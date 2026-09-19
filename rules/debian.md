@@ -153,6 +153,19 @@ third-party PPAs.
   `ufw status verbose` — look for
   `Default: deny (incoming)`. If incoming is set to
   `allow`, fix with `ufw default deny incoming`.
+- **Native nftables** is Debian's own default and
+  counts as a firewall too: `nftables.service` loads
+  `/etc/nftables.conf`. Check with
+  `systemctl is-active nftables` and
+  `nft list chains` (root). Default deny is an input
+  chain with `policy drop;` or a final drop/reject
+  rule. A host that runs it needs no ufw — do not
+  install ufw on top (see
+  `rules/service-class-check.md`).
+- **Docker** publishes ports past ufw: `-p 8080:80`
+  is public despite `ufw default deny incoming`.
+  Bind to `127.0.0.1:8080:80` behind a reverse proxy,
+  or restrict in the `DOCKER-USER` chain.
 
 ## Automatic Security Updates
 

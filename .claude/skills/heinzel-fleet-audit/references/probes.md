@@ -105,13 +105,13 @@ Highlight as drift:
 
 ## 3. Firewall posture
 
-Reading firewall state needs root (`ufw status` and
-`firewall-cmd` both refuse for normal users). Detect the
-*tool* via `command -v` (no root needed), but only report
-its *state* when root or `sudo -n` is available — otherwise
-emit the sentinel. Never let a permission error degrade to
-`tool=none`: that fabricates "no firewall" on a host whose
-firewall is simply unreadable.
+Reading firewall state needs root (`ufw status`,
+`firewall-cmd` and `nft list` all refuse for normal users).
+Detect the *tools* via `command -v` (no root needed), but
+only report their *state* when root or `sudo -n` is
+available — otherwise emit the sentinel. Never let a
+permission error degrade to `tool=none`: that fabricates
+"no firewall" on a host whose firewall is simply unreadable.
 
 ```bash
 if [ "$(id -u)" = "0" ]; then
@@ -121,37 +121,64 @@ elif sudo -n true 2>/dev/null; then
 else
   SUDO="-"
 fi
-# Prefer ufw on Debian/Ubuntu; firewall-cmd on RHEL family.
-if command -v ufw >/dev/null 2>&1; then
-  echo "tool=ufw"
-  if [ "$SUDO" = "-" ]; then
-    echo "state=unknown(needs-root)"
-  else
-    $SUDO ufw status verbose 2>&1
-  fi
-elif command -v firewall-cmd >/dev/null 2>&1; then
-  echo "tool=firewalld"
-  if [ "$SUDO" = "-" ]; then
-    echo "state=unknown(needs-root)"
-  else
-    $SUDO firewall-cmd --list-all 2>&1
-  fi
-else
-  echo "tool=none"
+TOOLS=""
+for t in ufw firewall-cmd nft; do
+  command -v "$t" >/dev/null 2>&1 && TOOLS="$TOOLS $t"
+done
+echo "tools=${TOOLS:- none}"
+echo "nftables.service=$(systemctl is-active nftables 2>/dev/null)"
+if [ -n "$TOOLS" ] && [ "$SUDO" = "-" ]; then
+  echo "state=unknown(needs-root)"
+elif [ -n "$TOOLS" ]; then
+  case "$TOOLS" in *ufw*)
+    echo "--ufw"; $SUDO ufw status verbose 2>&1 ;; esac
+  case "$TOOLS" in *firewall-cmd*)
+    echo "--firewalld"; $SUDO firewall-cmd --state 2>&1
+    $SUDO firewall-cmd --list-all 2>&1 ;; esac
+  case "$TOOLS" in *nft*)
+    echo "--nft"
+    $SUDO nft list chains 2>&1 \
+      | grep -E '^table|chain |hook input' ;; esac
+  echo "--legacy"
+  iptables -V 2>/dev/null
+  cat /proc/net/ip_tables_names \
+    /proc/net/ip6_tables_names 2>/dev/null
 fi
 ```
 
 (`$SUDO` is intentionally unquoted so an empty value
 disappears; `-` marks "no privilege path".)
 
+Classify the tool in this order, first match wins:
+
+1. `ufw` when `ufw status` says `Status: active`
+2. `firewalld` when `firewall-cmd --state` says `running`
+3. `nftables` when `nftables.service` is `active` or the
+   `--nft` block shows a chain with `hook input`
+4. `none` — nothing of the above. The `nft` binary alone
+   is not a firewall: Debian installs the nftables package
+   by default (priority `important`).
+
+Default deny for `nftables`: an input chain with
+`policy drop;`, or a final drop/reject rule (details in
+`heinzel-security` → `references/firewall.md`).
+
+If `iptables -V` says `(nf_tables)` and the `--legacy`
+block lists a table, count the legacy rules on that host:
+`iptables-legacy -S | grep -vc '^-P'` (and
+`ip6tables-legacy`). The proc files come first because
+`iptables-legacy` loads its kernel modules on demand.
+
 Row keys for the table:
 
-- Tool in use (`ufw` / `firewalld` / `none`)
-- State — `unknown(needs-root)` when the tool exists but
+- Tool in use (`ufw` / `firewalld` / `nftables` / `none`)
+- State — `unknown(needs-root)` when a tool exists but
   its status is unreadable without root
 - Default policy (deny incoming required)
 - Number of open ports / services
 - Whether 22/tcp is open (must be yes)
+- Legacy iptables rules next to nf_tables (count; > 0 is
+  a WARN — `nft` does not show them)
 
 Highlight as drift:
 
@@ -159,6 +186,8 @@ Highlight as drift:
 - Different default policy.
 - Different exposure of admin ports (5432, 27017, 3306,
   9100 to 0.0.0.0).
+- Any host with legacy iptables rules while the others
+  have none.
 
 ## 4. MTA
 
