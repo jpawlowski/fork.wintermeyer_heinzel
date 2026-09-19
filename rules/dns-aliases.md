@@ -14,21 +14,40 @@ When connecting to a hostname with no
 `memory/servers/<hostname>/` directory (and not a
 symlink):
 
-1. **Resolve the IP(s).** Query A records and
-   filter for addresses — a bare `dig +short` can
-   return a CNAME target instead of an IP:
+1. **Resolve the IP(s) the way `ssh` does.** Ask
+   the system resolver, not DNS directly: only it
+   sees `/etc/hosts`, the search domain and the
+   resolvers a VPN adds per domain (macOS scoped
+   resolvers, systemd-resolved split DNS). Collect
+   every IPv4 address, not just the first. On
+   Linux:
+   ```
+   getent ahostsv4 <hostname> | \
+     awk '{print $1}' | sort -u
+   ```
+   Where `getent` is missing or does not know
+   `ahostsv4` (macOS, FreeBSD), use `getaddrinfo`:
+   ```
+   python3 - <hostname> <<'EOF'
+   import socket, sys
+   for a in sorted({i[4][0] for i in socket.getaddrinfo(
+           sys.argv[1], None, socket.AF_INET)}):
+       print(a)
+   EOF
+   ```
+   Only when neither is available, query DNS with
+   `dig`, which misses everything above. Filter for
+   addresses — a bare `dig +short` can return a
+   CNAME target instead of an IP:
    ```
    dig +short A <hostname> | \
      grep -E '^[0-9.]+$'
    ```
-   Verify the syntax against the dig version on
+   Verify the syntax against the tool versions on
    the machine running the query (see CLAUDE.md →
-   Verify Before Running). Fallback if `dig` is
-   unavailable:
-   ```
-   python3 -c "import socket; \
-     print(socket.gethostbyname('<hostname>'))"
-   ```
+   Verify Before Running). If nothing resolves, the
+   IP comparisons below and the IP-level access
+   checks cannot run: tell the user so.
 
 2. **Compare against known servers.** Scan existing
    `memory/servers/*/memory.md` files (skip
@@ -54,8 +73,9 @@ its own SSH user.
 ## IP Verification
 
 On every connection to a known server, verify the
-current IP matches `- IP:` in memory. Compare
-against the full set of resolved IPs: round-robin
+current IP matches `- IP:` in memory. Resolve as in
+Detection step 1 and compare against the full set
+of resolved IPs: round-robin
 DNS gives a host multiple A records, and any
 overlap with the stored IP(s) counts as a match.
 Note multi-A hosts in server memory instead of

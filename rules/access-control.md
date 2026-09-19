@@ -40,11 +40,15 @@ For both files, the check is:
    IP(s). This catches DNS aliases of listed
    hosts that a plain string match would miss.
 
-If DNS resolution fails (no `dig`/`python3`, or DNS
-is down), fall back to exact string matching and
-tell the user explicitly that the IP-level check
-could not be performed. Err on the side of caution
-for anything ambiguous.
+Resolve through the system resolver, the way `ssh`
+does (`getent ahostsv4`, else `getaddrinfo`, `dig`
+only as the last resort — see
+`rules/dns-aliases.md` → Detection step 1). If no
+address resolves (no resolver tool, unknown name,
+or DNS is down), fall back to exact string matching
+and tell the user explicitly that the IP-level
+check could not be performed. Err on the side of
+caution for anything ambiguous.
 
 ## Server Blacklist
 
