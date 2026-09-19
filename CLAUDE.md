@@ -561,12 +561,11 @@ to `memory/user.md`.
 Cross-server facts go in `memory/network.md`.
 Created on first need. Current facts only.
 
-## Network Profile
-
-Read `rules/network.md`. Every server gets
-`memory/servers/<hostname>/network.md` (manager,
-IPv4/IPv6 stack, DNS, egress). Identify the owner
-of a network config before editing it.
+Each host's own network profile (manager, IPv4/IPv6
+stack, DNS, egress) goes in
+`memory/servers/<hostname>/network.md` — read
+`rules/network.md`. Identify the owner of a network
+config before editing it.
 
 ## Session To-Do List
 
