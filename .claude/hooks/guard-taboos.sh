@@ -81,6 +81,13 @@
 #   - `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
 #     reads the file — copy out via `cat /etc/ssh/sshd_config >
 #     /tmp/copy` instead.
+#   - The sshd paths match as substrings, with no boundary on
+#     either side: sshd_config.bak, /etc/sshd_extra.bak and a
+#     copy staged under another root (mnt/etc/ssh/sshd_config)
+#     count as the real file. The left side stays open on
+#     purpose, so /usr/local/etc/ssh and an offline image are
+#     covered (rules/cloud-image.md). Keep backups outside the
+#     guarded path, e.g. /root/backup/sshd_config.
 #   - ssh-keygen with a private key path ANYWHERE in the command:
 #     `file /etc/ssh/ssh_host_ed25519_key; ssh-keygen -lf
 #     ...key.pub` is denied although each part passes alone.
