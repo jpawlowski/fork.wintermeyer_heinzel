@@ -8,6 +8,9 @@ field in server memory files.
 server. Additional DNS names become filesystem
 symlinks to the canonical directory.
 
+Before comparing or recording the IP of a `.local`
+name, read `rules/mdns.md`.
+
 ## Detection (on every new hostname)
 
 When connecting to a hostname with no
