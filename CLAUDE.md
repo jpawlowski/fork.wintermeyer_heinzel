@@ -33,6 +33,14 @@ heinzel operates in **local mode**:
   checks, DNS alias detection, SSH user lookup,
   root SSH fallback.
 
+### Via-host mode (fallback)
+
+System containers and VMs: SSH first; when to go
+through the hypervisor host instead is in
+`rules/system-containers.md` → Reaching It. Docker
+and Podman containers are not guests: remote mode
+on their host.
+
 ### Remote mode (SSH)
 
 - **Default:** `ssh root@hostname` — only when root
@@ -116,9 +124,11 @@ remote connection before any other work.
   work.
 - **Ask before:** reboots, firewall changes, service
   restarts, credential or password rotations, any
-  destructive command. **Reloads**
-  (`systemctl reload`) auto-proceed by default when
-  a config test passes — see
+  destructive command. Stop or delete a system
+  container or VM only on the user's explicit
+  request (`rules/system-containers.md` → Changes).
+  **Reloads** (`systemctl reload`) auto-proceed by
+  default when a config test passes — see
   `rules/service-reload.md` for the full policy and
   the opt-out / opt-in config in
   `memory/service-policy.md`.
@@ -493,6 +503,12 @@ would drag in Apache on a host where Nginx already
 serves). Read `rules/service-class-check.md`.
 **Never add a second member of the same class
 without explicit user approval.**
+
+## Services in Containers
+
+Read `rules/containers.md` before inspecting or
+changing a service that runs in Docker, Podman or
+containerd.
 
 ## CI/CD Deployment
 

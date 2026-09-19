@@ -105,3 +105,6 @@ Read on demand:
 - BatchMode SSH means no password prompts. Hosts that need
   a passphrase get skipped — fix the agent setup
   separately.
+- A host with `- Mode: via …` in its memory has no SSH
+  user of its own: probe it through that host
+  (`rules/first-connection.md` → Via-host mode).

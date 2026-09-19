@@ -95,12 +95,17 @@ for details.
 - **WARN** if latest pull is older than 25 hours
 - **CRITICAL** if older than 48 hours
 
-## Docker
+## Containers
 
-Triggered when `memory.md` mentions Docker.
+Triggered by a `Container runtime:` line in
+`memory.md`, or a mention of Docker or Podman.
+`<rt>` is `docker`, `podman` or `nerdctl`. Run it
+also as each rootless owner on that line, and per
+containerd namespace: `rules/containers.md` →
+Detect the Runtime.
 
 ```bash
-docker ps --format \
+<rt> ps --format \
   "table {{.Names}}\t{{.Status}}\t{{.Ports}}" \
   2>/dev/null
 ```

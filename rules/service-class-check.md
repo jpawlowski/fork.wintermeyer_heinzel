@@ -294,11 +294,15 @@ class member in
 - Time sync: chrony
 - DNS resolver: unbound
 - Firewall manager: ufw
-- Container runtime: podman
+- Container runtime: podman (rootless: alice)
 ```
 
+For the container runtime, add `(rootful)` or
+`(rootless: <owners>)` (`rules/containers.md`).
+
 If an entry already exists for the class, leave
-it. If option (b) replaced the existing member,
+it; only the rootless owners in parentheses are
+kept current. If option (b) replaced the existing member,
 update the entry. If option (c) added a second
 member, record both on one line with a note:
 

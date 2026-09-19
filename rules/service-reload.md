@@ -83,6 +83,9 @@ Matching is by systemd unit name without the
 `.service` suffix. For templated units, match the
 full instance (`nginx@default`). No wildcards in v1.
 
+A container outside a systemd unit matches by its
+container name (`rules/containers.md`).
+
 On FreeBSD and macOS, match the `service` /
 `brew services` / `launchctl` service name.
 

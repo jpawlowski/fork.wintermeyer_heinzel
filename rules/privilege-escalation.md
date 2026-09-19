@@ -5,6 +5,11 @@ machine, skip the root SSH fallback entirely. If
 sudo is unusable, go straight to unprivileged mode
 (see `CLAUDE.md` → Local mode).
 
+**Via-host mode:** exec runs as root inside the
+container; skip the sudo probe there. The exec
+itself needs root on the host: probe sudo on the
+host as usual.
+
 ## Sudo
 
 When connecting as a non-root user and a privileged
@@ -30,6 +35,16 @@ command -v sudo && sudo -n true
 
 On subsequent connections, check server memory for
 the sudo flag.
+
+## Root-Equivalent Groups
+
+Membership in `docker`, `lxd` or `incus-admin` is
+root: the daemon behind the socket mounts any host
+path on request.
+A user in such a group needs no sudo for that
+daemon. Record `- Root-equivalent group: docker`
+in server memory, not unprivileged mode. Never add
+a user to one of these groups.
 
 ## Root SSH Fallback
 

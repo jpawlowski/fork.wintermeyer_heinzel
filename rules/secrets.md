@@ -22,6 +22,8 @@ keys, weak permissions) is the job of the
 - `.env` files and application config with
   credentials (database URLs with passwords,
   `secret_key_base`, API tokens)
+- Container secrets (`/run/secrets/*`) and
+  container environment variables
 - `~/.netrc`, `~/.aws/credentials`,
   `~/.config/gcloud/`, cloud provider tokens
 - Mail credentials (`msmtprc`, `sasl_passwd`)

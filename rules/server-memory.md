@@ -26,6 +26,11 @@ add `Mode: local` for localhost).
 change.** Keep it compact (~30 lines max). Remove
 outdated entries, merge related items.
 
+A guest reached through its hypervisor host
+(`rules/first-connection.md` → Via-host mode)
+records the way in:
+`- Mode: via pve1.example.com (pct exec 105)`.
+
 **Update `Last connected:` on every connection.**
 
 Memory files never hold credential values — see

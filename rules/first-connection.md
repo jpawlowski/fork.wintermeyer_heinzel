@@ -41,6 +41,21 @@ hostname), skip steps 1–4 — they are remote-only
 Still run OS detection, server memory, and activity
 check.
 
+## Via-host mode
+
+When it applies: `rules/system-containers.md` →
+Reaching It. Check blacklist and read-only for both
+hosts, skip steps 3–4, run the rest inside, bundled
+into one call per step (`rules/ssh-connections.md`
+→ 1):
+
+    ssh … pve1 'pct exec 105 -- sh -s' <<'EOS'
+    …
+    EOS
+
+The heredoc needs stdin; for `qm guest exec` bundle
+into one `sh -c '…'` argument instead.
+
 ## Why it's mandatory
 
 Skipping steps has caused real incidents: stale

@@ -76,6 +76,10 @@ Two caveats to carry into the report:
 
 - A snapshot on the **same** disk or pool is not an
   off-host backup. Report it, but say so explicitly.
+- On a hypervisor host, a guest snapshot named
+  `heinzel-…` with no open `todo.md` item is left
+  over: report it and offer to delete it
+  (`rules/system-containers.md` → Snapshots).
 - restic/borg env and password files (e.g.
   `/root/.restic-env`) contain repository
   credentials — inspect names and mtimes only,

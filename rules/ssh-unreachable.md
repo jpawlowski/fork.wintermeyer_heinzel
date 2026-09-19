@@ -79,3 +79,13 @@ Do not probe with `nc -z` or `ssh-keyscan`: fail2ban
 (modes `ddos` and `aggressive`) and sshd's
 `PerSourcePenalties` count a connection that never
 logs in. A successful login counts for neither.
+
+## A guest on a known host
+
+A system container or VM that gives no answer at
+all (not a rejected login) after the retry above
+can be reached through its hypervisor host: ask the
+user first, then use via-host mode for this session
+(`rules/system-containers.md` → Reaching It). Never
+use it to get around a rejected login or a block
+heinzel caused.

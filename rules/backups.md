@@ -15,6 +15,10 @@ In unprivileged mode, use `~/.heinzel-backups/` for
 user-owned files. System config files cannot be
 edited — defer those to the sysadmin report.
 
+On a container or VM whose host heinzel can reach,
+prefer a snapshot of the whole guest before a risky
+change (`rules/system-containers.md` → Snapshots).
+
 ## Never back up in place inside drop-in directories
 
 Several Linux config systems read **every** file in a
