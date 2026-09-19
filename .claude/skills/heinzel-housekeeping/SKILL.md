@@ -78,6 +78,7 @@ Read on demand, only when the relevant section applies:
 
 ## Scope and limits
 
+- **Several hosts:** see `rules/multi-host.md` → Limits.
 - Linux (Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE) and
   macOS are fully covered by the baseline references above.
 - FreeBSD baselines are not yet covered. On a FreeBSD host,

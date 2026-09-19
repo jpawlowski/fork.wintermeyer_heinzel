@@ -585,6 +585,75 @@ else
 fi
 rm -rf "$SHIM2"
 
+# --- bin/heinzel-fanout keeps the guard in the loop -------------
+# The Bash tool's guard sees only the command line. The fan-out
+# helper reads its script from stdin, which may be a file the
+# guard never saw, so the helper runs the guard itself. Each
+# refusal below must exit 2 without a single ssh call. Runs in a
+# throwaway repo copy with ssh and dig replaced by recorders.
+FO=$(mktemp -d)
+mkdir -p "$FO/repo/bin" "$FO/repo/.claude/hooks" "$FO/shim" \
+  "$FO/repo/memory/servers/web1.test"
+cp "$CLAUDE_DIR/../bin/heinzel-fanout" "$FO/repo/bin/"
+cp "$HOOK" "$FO/repo/.claude/hooks/guard-taboos.sh"
+printf 'Default: alice\n' > "$FO/repo/memory/user.md"
+printf '# web1.test\n- IP: 10.0.0.2\n' \
+  > "$FO/repo/memory/servers/web1.test/memory.md"
+# The recorder runs only the payload's first line, the start
+# marker, so a run that gets through counts as started.
+printf '#!/bin/sh\necho "$*" >> "%s/ssh.log"\nhead -n 1 | sh\n' \
+  "$FO" > "$FO/shim/ssh"
+printf '#!/bin/sh\necho 10.0.0.2\n' > "$FO/shim/dig"
+chmod +x "$FO/shim/ssh" "$FO/shim/dig"
+
+# fanout_check <expected rc> <label> <stdin file> <args...>
+fanout_check() {
+  WANT=$1 LABEL=$2 IN=$3
+  shift 3
+  rm -f "$FO/ssh.log"
+  env -u HEINZEL_GUARD_DISABLE PATH="$FO/shim:$PATH" \
+    sh "$FO/repo/bin/heinzel-fanout" "$@" < "$IN" >/dev/null 2>&1
+  GOT=$?
+  if [ "$GOT" -ne "$WANT" ]; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL: heinzel-fanout $LABEL: exit $GOT, want $WANT"
+  elif [ "$WANT" -eq 2 ] && [ -s "$FO/ssh.log" ]; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL: heinzel-fanout $LABEL: refused but still ran ssh"
+  else
+    PASS=$((PASS + 1))
+  fi
+}
+
+printf 'uptime\nmkfs.ext4 /dev/sdb1\n' > "$FO/taboo.sh"
+printf 'python3 -c "open(%s,%s)"\n' \
+  "'/root/.ssh/authorized_keys'" "'w'" > "$FO/runtime.sh"
+printf 'uptime\n' > "$FO/ok.sh"
+: > "$FO/empty.sh"
+fanout_check 2 'taboo script from a file' "$FO/taboo.sh" \
+  --write web1.test
+fanout_check 2 'key write through a runtime' "$FO/runtime.sh" \
+  --write web1.test
+fanout_check 2 'taboo in the --log line' "$FO/ok.sh" \
+  --read --log 'done; poweroff' web1.test
+fanout_check 2 'host name read as an ssh option' "$FO/ok.sh" \
+  --read -oProxyCommand=x
+fanout_check 2 'host name with shell characters' "$FO/ok.sh" \
+  --read 'web1.test;id'
+fanout_check 2 'empty script' "$FO/empty.sh" --read web1.test
+fanout_check 0 'harmless script runs' "$FO/ok.sh" --read web1.test
+fanout_check 0 'built-in onboarding passes the guard' \
+  "$FO/empty.sh" --onboard web1.test
+fanout_check 0 'harmless write script runs' "$FO/ok.sh" \
+  --write --log '[op as {user}] rotated logs' web1.test
+
+# A guard that crashes or is missing allows nothing.
+printf 'exit 3\n' > "$FO/repo/.claude/hooks/guard-taboos.sh"
+fanout_check 2 'broken guard' "$FO/ok.sh" --read web1.test
+rm -f "$FO/repo/.claude/hooks/guard-taboos.sh"
+fanout_check 2 'missing guard' "$FO/ok.sh" --read web1.test
+rm -rf "$FO"
+
 # --- fallback path: malformed (non-JSON) stdin -----------------
 OUT=$(printf '%s' 'mkfs.ext4 /dev/sda1' \
   | env -u HEINZEL_GUARD_DISABLE sh "$HOOK")

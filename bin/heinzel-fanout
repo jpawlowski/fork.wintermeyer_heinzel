@@ -1,0 +1,408 @@
+#!/bin/sh
+# heinzel-fanout — run one script on several known servers
+# in parallel and collect the results. Identical outputs
+# are grouped, so twenty hosts that agree print once.
+#
+# Usage:
+#   heinzel-fanout --onboard [opts] (--all | host ...)
+#   heinzel-fanout --read    [opts] (--all | host ...) <<'EOS'
+#   <script>
+#   EOS
+#   heinzel-fanout --write   [opts] (--all | host ...) <<'EOS'
+#   <script>
+#   EOS
+#
+# Modes (exactly one):
+#   --onboard     Remote part of rules/first-connection.md:
+#                 OS detection and activity check.
+#   --read        The script only inspects.
+#   --write       The script changes something. Hosts in
+#                 memory/readonly.md are skipped.
+#
+# Options:
+#   --all         Every server in memory/servers/ (no
+#                 aliases, no example hosts, no local mode)
+#   -P <n>        Parallel connections (default 8, max 32)
+#   --log <msg>   On each host whose script exited 0, log
+#                 msg with logger -t heinzel. {user} becomes
+#                 that host's SSH user.
+#   --max-lines <n>  Lines shown per output group (default
+#                 40); full output stays in the run directory
+#   --dry-run     Show targets and skip reasons, connect
+#                 nowhere
+#   --help        Show this help
+#
+# The script is read from stdin. Pass it as a heredoc in the
+# same command, so the permission prompt shows it. Whatever
+# the source, heinzel-fanout runs it through
+# .claude/hooks/guard-taboos.sh first and refuses on a deny.
+#
+# Only hosts that already have memory/servers/<host>/ are
+# reached: a first connection runs on its own. Blacklisted
+# hosts, hosts without an SSH user and hosts whose IP no
+# longer matches memory are skipped with a reason. A
+# `- SSH port:` line in a host's memory.md sets its port.
+#
+# Exit status: 0 all targets exited 0, 1 a target failed or
+# was unreachable, 2 refused (usage, guard, no targets).
+set -u
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+SELF="$SCRIPT_DIR/$(basename "$0")"
+MEM="$REPO_DIR/memory"
+GUARD="$REPO_DIR/.claude/hooks/guard-taboos.sh"
+SOCKDIR="$HOME/.cache/heinzel"
+MARK='###heinzel-fanout-started###'
+
+# The standard options from CLAUDE.md → SSH Options.
+ssh_std() {
+  ssh -o BatchMode=yes -o ConnectTimeout=5 \
+    -o ControlMaster=auto \
+    -o ControlPath="$SOCKDIR/ssh-%C" \
+    -o ControlPersist=10m \
+    -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+    ${PORTOPT:+"$PORTOPT"} "$@"
+}
+
+usage() {
+  awk '/^# heinzel-fanout/{in_help=1} in_help{if(/^[^#]/)exit; sub(/^# ?/,""); print}' "$SELF"
+}
+
+RUN=""
+die() {
+  echo "heinzel-fanout: $*" >&2
+  [ -z "$RUN" ] || rm -rf "$RUN"
+  exit 2
+}
+
+# A plain DNS name: nothing ssh could read as an option and
+# nothing a shell or a path would interpret.
+valid_host() {
+  case "$1" in
+    ''|[!A-Za-z0-9]*|*[!A-Za-z0-9._-]*) return 1 ;;
+  esac
+}
+
+row() {
+  printf '%-9s %-32s %s\n' "$1" "$2" "$3"
+}
+
+# Quote a string for a POSIX shell (and fish): wrap in
+# single quotes, close-escape-reopen embedded ones.
+shquote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+# --- worker (called by xargs, one per host) ------------------
+if [ "${1:-}" = "--worker" ]; then
+  RUN=$2 host=$3 user=$4 port=$5
+  # "-": no `- SSH port:` in memory, ssh picks the port.
+  PORTOPT=""
+  [ "$port" = - ] || PORTOPT="-oPort=$port"
+  ssh_std "$user@$host" 'sh -s' \
+    < "$RUN/payload.sh" > "$RUN/raw.$host" 2>&1
+  rc=$?
+  echo "$rc" > "$RUN/rc/$host"
+  # The payload's first line is the start marker. Without it
+  # the script never began: the host was not reached.
+  if [ "$(head -n 1 "$RUN/raw.$host")" = "$MARK" ]; then
+    sed 1d "$RUN/raw.$host" > "$RUN/out/$host"
+    rm -f "$RUN/raw.$host"
+  else
+    mv "$RUN/raw.$host" "$RUN/unreach/$host"
+  fi
+  if [ "$rc" -eq 0 ] && [ -n "$LOGMSG" ]; then
+    msg=$(printf '%s' "$LOGMSG" | sed "s/{user}/$user/g")
+    if ssh_std "$user@$host" \
+        "logger -t heinzel $(shquote "$msg")" \
+        > "$RUN/logerr/$host" 2>&1; then
+      rm -f "$RUN/logerr/$host"
+    fi
+  fi
+  exit 0
+fi
+
+# --- arguments -----------------------------------------------
+MODE="" ALL=0 PAR=8 LOGMSG="" MAXL=40 DRY=0 HOSTS=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --onboard|--read|--write)
+      [ -z "$MODE" ] || die "choose one of --onboard, --read, --write"
+      MODE=${1#--} ;;
+    --all) ALL=1 ;;
+    -P) [ $# -ge 2 ] || die "-P needs a number"; PAR=$2; shift ;;
+    --log) [ $# -ge 2 ] || die "--log needs a message"; LOGMSG=$2; shift ;;
+    --max-lines) [ $# -ge 2 ] || die "--max-lines needs a number"; MAXL=$2; shift ;;
+    --dry-run) DRY=1 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) die "unknown option: $1 (see --help)" ;;
+    *)
+      # A host name that could be read as an ssh option or a
+      # path is refused here, before anything else sees it.
+      valid_host "$1" || die "invalid host name: $1"
+      HOSTS="$HOSTS $1" ;;
+  esac
+  shift
+done
+[ -n "$MODE" ] || die "choose one of --onboard, --read, --write (see --help)"
+case "$PAR" in ''|*[!0-9]*) die "-P needs a number" ;; esac
+case "$MAXL" in ''|*[!0-9]*) die "--max-lines needs a number" ;; esac
+[ "$PAR" -ge 1 ] || PAR=1
+[ "$PAR" -le 32 ] || PAR=32
+if [ "$ALL" -eq 1 ] && [ -n "$HOSTS" ]; then
+  die "use --all or host names, not both"
+fi
+[ "$ALL" -eq 1 ] || [ -n "$HOSTS" ] || die "no hosts given (see --help)"
+case "$LOGMSG" in *"
+"*) die "--log message must be one line" ;; esac
+export LOGMSG
+
+# --- payload -------------------------------------------------
+RUN=$(mktemp -d "${TMPDIR:-/tmp}/heinzel-fanout.XXXXXX") \
+  || die "cannot create run directory"
+mkdir "$RUN/out" "$RUN/rc" "$RUN/unreach" "$RUN/logerr" "$RUN/groups"
+
+if [ "$MODE" = onboard ]; then
+  # A copy of the remote commands in rules/os-detection.md and
+  # rules/activity-check.md. Change them together.
+  cat > "$RUN/payload.sh" <<'EOS'
+echo "###os###"
+uname -s
+uname -m
+if [ -r /etc/os-release ]; then
+  (. /etc/os-release && echo "${ID}|${ID_LIKE:-}|${VERSION_ID:-}|${PRETTY_NAME}")
+fi
+command -v freebsd-version >/dev/null 2>&1 && freebsd-version
+command -v sw_vers >/dev/null 2>&1 && sw_vers -productVersion
+echo "###user###"
+id -un
+echo "###activity###"
+if command -v journalctl >/dev/null 2>&1; then
+  if [ "$(id -u)" -eq 0 ]; then
+    journalctl -t heinzel --since "7 days ago" --no-pager -q
+  elif sudo -n true 2>/dev/null; then
+    sudo -n journalctl -t heinzel --since "7 days ago" --no-pager -q
+  else
+    echo "(no root, no passwordless sudo: other users' entries may be hidden)"
+    journalctl -t heinzel --since "7 days ago" --no-pager
+  fi
+  echo "###activity-rc=$?###"
+elif [ "$(uname -s)" = Darwin ]; then
+  out=$(/usr/bin/log show --last 7d --predicate 'process == "logger"' --info 2>&1)
+  rc=$?
+  printf '%s\n' "$out" | grep heinzel
+  echo "###activity-rc=$rc###"
+else
+  grep -h heinzel /var/log/messages.0 /var/log/messages 2>/dev/null | tail -20
+  echo "###activity-rc=0 (last 20 matches, messages and messages.0)###"
+fi
+EOS
+else
+  [ ! -t 0 ] || die "--$MODE reads its script from stdin (use a heredoc)"
+  cat > "$RUN/payload.sh"
+  grep -q '[^[:space:]]' "$RUN/payload.sh" || die "empty script on stdin"
+fi
+
+# --- guard ---------------------------------------------------
+# The Bash tool's guard only sees the command line. A script
+# redirected from a file never reaches it, so the script and
+# the log line run through the same guard here. No guard, no
+# run: this fails closed.
+[ -r "$GUARD" ] || die "guard not found at $GUARD, refusing to run"
+GUARDTEXT=$(cat "$RUN/payload.sh"
+  [ -z "$LOGMSG" ] || echo "logger -t heinzel $(shquote "$LOGMSG")")
+if command -v jq >/dev/null 2>&1; then
+  printf '%s' "$GUARDTEXT" \
+    | jq -Rs '{tool_name:"Bash",tool_input:{command:.}}' \
+    > "$RUN/guard.in" || die "cannot encode the script for the guard"
+else
+  # The guard scans raw input when it cannot parse JSON, which
+  # can only over-block.
+  printf '%s' "$GUARDTEXT" > "$RUN/guard.in"
+fi
+# The guard exits 0 whether it allows or denies. Anything
+# else means it broke, and a broken guard allows nothing.
+VERDICT=$(sh "$GUARD" < "$RUN/guard.in") \
+  || die "the taboo guard failed, refusing to run"
+if printf '%s' "$VERDICT" | grep -q '"permissionDecision":"deny"'; then
+  REASON=$(printf '%s' "$VERDICT" \
+    | sed -n 's/.*"permissionDecisionReason":"\([^"]*\)".*/\1/p')
+  die "refused, the script is denied by the taboo guard: $REASON"
+fi
+
+# --- targets -------------------------------------------------
+[ -f "$MEM/user.md" ] || die "memory/user.md missing: set up SSH users first (rules/ssh-user.md)"
+
+# IPv4 addresses of a name; an address resolves to itself.
+resolve() {
+  if printf '%s' "$1" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
+    echo "$1"; return
+  fi
+  if command -v dig >/dev/null 2>&1; then
+    dig +short +time=2 +tries=1 A "$1" 2>/dev/null \
+      | grep -E '^[0-9]+(\.[0-9]+){3}$'
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 - "$1" 2>/dev/null <<'EOP'
+import socket, sys
+for a in sorted({i[4][0] for i in socket.getaddrinfo(sys.argv[1], None, socket.AF_INET)}):
+    print(a)
+EOP
+  fi
+}
+
+# Entries of an access-control file (rules/access-control.md),
+# each with its IPs, resolved once for the whole run:
+# "<entry> <ip> <ip> ...".
+load_list() {
+  [ -f "$1" ] || return 0
+  sed -e 's/#.*//' -e 's/^[[:space:]]*-[[:space:]]*//' \
+      -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//' "$1" \
+    | grep -v '^$' | while read -r e; do
+      printf '%s %s\n' "$e" "$(resolve "$e" | tr '\n' ' ')"
+    done
+}
+
+# listed <loaded list> <host> <host-ips>: the hostname, an IP,
+# or the IP of a listed name matches.
+listed() {
+  printf '%s\n' "$1" | {
+    while read -r e eips; do
+      [ -n "$e" ] || continue
+      [ "$e" = "$2" ] && exit 0
+      for eip in $eips; do
+        case " $3 " in *" $eip "*) exit 0 ;; esac
+      done
+    done
+    exit 1
+  }
+}
+
+ssh_user() {
+  re=$(printf '%s' "$1" | sed 's/\./\\./g')
+  u=$(sed -n "s/^[[:space:]]*-[[:space:]]*$re:[[:space:]]*\([^[:space:]#]*\).*/\1/p" \
+        "$MEM/user.md" | head -1)
+  [ -n "$u" ] || u=$(sed -n 's/^Default:[[:space:]]*\([^[:space:]#]*\).*/\1/p' \
+        "$MEM/user.md" | head -1)
+  printf '%s' "$u"
+}
+
+skip() {
+  row "$@" >> "$RUN/skipped"
+}
+
+if [ "$ALL" -eq 1 ]; then
+  for d in "$MEM"/servers/*; do
+    [ -d "$d" ] && [ ! -L "$d" ] || continue
+    h=$(basename "$d")
+    valid_host "$h" || continue
+    case "$h" in
+      *.example|*.example.com|*.example.net|*.example.org|example.*|\
+      192.0.2.*|198.51.100.*|203.0.113.*)
+        skip example "$h" "placeholder name, --all leaves it out"; continue ;;
+    esac
+    HOSTS="$HOSTS $h"
+  done
+fi
+
+BLACK=$(load_list "$MEM/blacklist.md")
+READONLY=""
+[ "$MODE" != write ] || READONLY=$(load_list "$MEM/readonly.md")
+LOCALNAMES="localhost $(hostname 2>/dev/null) $(hostname -s 2>/dev/null)"
+: > "$RUN/targets"
+SEEN=" "
+for h in $HOSTS; do
+  case "$SEEN" in *" $h "*) continue ;; esac
+  SEEN="$SEEN$h "
+  case " $LOCALNAMES " in *" $h "*)
+    skip local "$h" "local machine: run the command directly"; continue ;;
+  esac
+  IPS=$(resolve "$h" | tr '\n' ' ' | sed 's/ *$//')
+  if listed "$BLACK" "$h" "$IPS"; then
+    skip blocked "$h" "blacklisted in memory/blacklist.md"; continue
+  fi
+  if listed "$READONLY" "$h" "$IPS"; then
+    skip readonly "$h" "read-only in memory/readonly.md, --write skips it"; continue
+  fi
+  M="$MEM/servers/$h/memory.md"
+  if [ ! -f "$M" ]; then
+    skip new "$h" "no memory/servers/$h/: connect to it on its own first"; continue
+  fi
+  if grep -Eq '^- Mode:[[:space:]]*local' "$M"; then
+    skip local "$h" "Mode: local in memory: run the command directly"; continue
+  fi
+  case "$IPS" in 127.*) skip local "$h" "resolves to loopback"; continue ;; esac
+  KNOWN=$(grep -E '^- IP:' "$M" \
+    | grep -Eo '[0-9]+(\.[0-9]+){3}' | tr '\n' ' ' | sed 's/ *$//')
+  if [ -z "$IPS" ]; then
+    echo "note: $h does not resolve, IP check and IP-level access checks skipped" >> "$RUN/notes"
+  elif [ -n "$KNOWN" ]; then
+    MATCH=0
+    for a in $IPS; do case " $KNOWN " in *" $a "*) MATCH=1 ;; esac; done
+    if [ "$MATCH" -eq 0 ]; then
+      skip STOP "$h" "resolves to $IPS, memory says $KNOWN (rules/dns-aliases.md)"
+      continue
+    fi
+  fi
+  u=$(ssh_user "$h")
+  case "$u" in
+    ''|[!a-z_]*|*[!a-z0-9_.-]*)
+      skip nouser "$h" "no valid SSH user in memory/user.md"; continue ;;
+  esac
+  port=$(sed -n 's/^- SSH port:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$M" | head -1)
+  echo "$h $u ${port:--}" >> "$RUN/targets"
+done
+
+NT=$(wc -l < "$RUN/targets" | tr -d ' ')
+echo "run: $RUN  mode: $MODE  targets: $NT  parallel: $PAR"
+[ ! -s "$RUN/skipped" ] || cat "$RUN/skipped"
+[ ! -s "$RUN/notes" ] || cat "$RUN/notes"
+if [ "$DRY" -eq 1 ]; then
+  sed 's/^/target    /' "$RUN/targets"
+  rm -rf "$RUN"
+  exit 0
+fi
+[ "$NT" -gt 0 ] || exit 2
+
+# --- run -----------------------------------------------------
+{ echo "echo '$MARK'"; cat "$RUN/payload.sh"; } > "$RUN/send.sh"
+mv "$RUN/send.sh" "$RUN/payload.sh"
+mkdir -p -m 700 "$SOCKDIR"
+xargs -n 3 -P "$PAR" "$SELF" --worker "$RUN" < "$RUN/targets"
+
+# --- collect -------------------------------------------------
+# A host whose script never started is unreachable. One that
+# started and then failed, rc 255 included, is grouped with
+# its output like any other.
+STATUS=0
+while read -r h _; do
+  rc=$(cat "$RUN/rc/$h")
+  [ "$rc" -eq 0 ] || STATUS=1
+  if [ -f "$RUN/unreach/$h" ]; then
+    row unreach "$h" \
+      "$(grep -v '^[[:space:]]*$' "$RUN/unreach/$h" | tail -1)"
+    continue
+  fi
+  key=$( { echo "rc=$rc"; cat "$RUN/out/$h"; } | cksum | tr ' ' _)
+  echo "$h" >> "$RUN/groups/$key"
+done < "$RUN/targets"
+
+for g in "$RUN"/groups/*; do
+  [ -f "$g" ] || continue
+  printf '%s %s\n' "$(wc -l < "$g" | tr -d ' ')" "$g"
+done | sort -rn | while read -r n g; do
+  first=$(head -n 1 "$g")
+  echo
+  echo "== $n host(s), rc=$(cat "$RUN/rc/$first"): $(tr '\n' ' ' < "$g" | sed 's/ $//')"
+  lines=$(wc -l < "$RUN/out/$first" | tr -d ' ')
+  head -n "$MAXL" "$RUN/out/$first"
+  if [ "$lines" -gt "$MAXL" ]; then
+    echo "... ($lines lines, full output: $RUN/out/$first)"
+  fi
+done
+
+for f in "$RUN"/logerr/*; do
+  [ -f "$f" ] || continue
+  echo "log failed on $(basename "$f"): $(tail -1 "$f")"
+done
+exit "$STATUS"

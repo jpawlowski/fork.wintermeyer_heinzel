@@ -420,6 +420,13 @@ after fixing a config bug on one server to find which
 others carry the same bug, or as a periodic consistency
 check across the fleet.
 
+## Several Hosts at Once
+
+When one request names two or more servers, read
+`rules/multi-host.md` and fan out with
+`bin/heinzel-fanout`. Ad-hoc tasks across hosts go
+through the `heinzel-fleet-run` skill.
+
 ## Programming Language Runtimes
 
 Use [mise](https://mise.jdx.dev) — see

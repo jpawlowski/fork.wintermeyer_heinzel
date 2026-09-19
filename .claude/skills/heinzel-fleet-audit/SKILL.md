@@ -41,17 +41,23 @@ servers" — that maps to single-host housekeeping.
 
 ## Workflow
 
-1. **Discover hosts.** List directories under
-   `memory/servers/` whose name resolves to a real host
-   (skip placeholders like `server1.example.com` and
-   `192.168.64.20` unless the user names them explicitly).
-   The user may pass an explicit subset as arguments — in
-   that case audit only those.
+1. **Discover hosts.** By default every server in
+   `memory/servers/` (`--all` below). The user may pass an
+   explicit subset as arguments — in that case audit only
+   those.
 
-2. **Resolve SSH users.** Read `memory/user.md` for the
-   per-host SSH user. Hosts without a mapping go on a
-   "skipped: no SSH user known" list (do not prompt — just
-   report).
+2. **Onboard all hosts in one call.** The pipeline in
+   `rules/first-connection.md` applies to every host; run its
+   remote part for all of them at once, as
+   `rules/multi-host.md` → Onboarding for a fan-out says:
+
+   ```bash
+   bin/heinzel-fanout --onboard host1 host2 host3
+   ```
+
+   Use `--all` instead of host names when the user did not
+   name a subset. Carry each skip line into the report's
+   `Skipped:` header; do not prompt for missing users.
 
 3. **Probe in parallel.** For each in-scope host, run the
    probes from `references/probes.md` in a single batched
@@ -59,6 +65,24 @@ servers" — that maps to single-host housekeeping.
    SSH Options.
    Hosts that time out or refuse the connection go on a
    "skipped: unreachable" list.
+
+   Do it for all hosts in one `--read` fan-out, which applies
+   those options, and attach the journal line. The script is
+   the body of the probe block in `references/probes.md`,
+   without its `ssh … '` wrapper:
+
+   ```bash
+   bin/heinzel-fanout --read --max-lines 0 \
+     --log '[<operator> as {user}] read-only: fleet-audit probe' \
+     host1 host2 host3 <<'EOS'
+   <probe script from references/probes.md>
+   EOS
+   ```
+
+   Then read each host's raw output from the run directory
+   (`out/<host>`) the helper prints, and split it on the
+   `###<key>###` markers. Hosts listed as `unreach` are the
+   unreachable ones.
 
 4. **Render comparison.** Build one table per probe category
    using the format in `references/output-format.md`. Hosts
@@ -70,18 +94,17 @@ servers" — that maps to single-host housekeeping.
    recommended fix (link to the relevant rule or skill). Do
    not change anything.
 
-6. **Log to the system journal** on each audited host:
+6. **Journal.** The `--log` option in step 3 already wrote
+   one audit-trail line to each host whose probe ran. The
+   helper prints `log failed on <host>` for any host where
+   it could not; mention those in the report.
 
-       logger -t heinzel "fleet-audit: read-only policy probe"
-
-   (One line per host — this is an audit trail, not a
-   change record.)
-
-7. **No memory updates.** The audit is a snapshot; it does
-   not own server state. If the audit uncovers a memory
-   file that contradicts the live config, mention it in
-   the "Drift detected" section so the user can decide
-   what to fix.
+7. **No policy memory updates.** Apart from what onboarding
+   itself records (`Last connected:`, a changed OS version),
+   the audit is a snapshot; it does not own server state. If
+   the audit uncovers a memory file that contradicts the
+   live config, mention it in the "Drift detected" section
+   so the user can decide what to fix.
 
 ## References
 

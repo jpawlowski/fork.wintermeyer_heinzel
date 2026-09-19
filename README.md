@@ -361,6 +361,25 @@ writes one audit-trail line to each journal). Use it after
 fixing a config bug on one server to find which others
 carry the same bug, or as a periodic consistency check.
 
+### Several servers at once
+
+Ask one question or roll out one change across several
+servers:
+
+```
+ ❯ Which kernel runs on web1, web2 and web3?
+ ❯ Prüfe auf allen Servern, ob nginx läuft
+```
+
+Heinzel sends one script to all hosts in parallel with
+`bin/heinzel-fanout` and groups identical answers, so
+twenty hosts that agree print once and the outlier
+stands out. Every host still gets the full onboarding,
+blacklisted hosts are skipped, changes skip read-only
+hosts, and the taboo guard checks the script before
+anything connects. Changes go to one canary host
+first. See `rules/multi-host.md`.
+
 ### Email reports
 
 Send ad-hoc text or files by email about a managed server:
@@ -443,7 +462,7 @@ directory is picked up via prose references in
 project files and runs shell commands will also handle
 the rule layer — only the on-demand skills
 (housekeeping, security audit, email reports, fleet
-audit) need Skills-aware tooling.
+audit, fleet run) need Skills-aware tooling.
 
 OpenCode note: if you've set
 `OPENCODE_DISABLE_CLAUDE_CODE=1`, OpenCode stops
@@ -931,6 +950,8 @@ bin/
   heinzel-backup       — Back up / restore your memory/ tree
   heinzel-migrate      — One-shot 1.x→2.0 user-state migration
                          (called automatically on update)
+  heinzel-fanout       — Run one script on several servers in
+                         parallel, grouped results
 .claude/               — Shared by Claude Code and OpenCode
   settings.json        — Project-level Claude Code settings
   hooks/
@@ -949,6 +970,8 @@ bin/
                          from a server (SKILL.md)
     heinzel-fleet-audit/   — Cross-server policy drift audit
                          (SKILL.md + references/)
+    heinzel-fleet-run/ — One task on several servers at once
+                         (SKILL.md)
 rules/                 — Upstream rule files (git-tracked)
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky,
@@ -970,6 +993,8 @@ rules/                 — Upstream rule files (git-tracked)
                          avoiding failed logins
   ssh-unreachable.md   — No retry loops; blocked path vs
                          broken host
+  multi-host.md        — Fan-out to several servers:
+                         onboarding, guard, grouped output
   server-memory.md     — Server memory file format
   changelog.md         — Session logging procedure
   activity-check.md    — Recent-activity summary on connect
