@@ -26,8 +26,8 @@ Disk       / 58% (1.0 TB / 1.8 TB)
 Memory     8.2 GB / 64 GB available
 Load       0.42 / 0.38 / 0.35 (4 cores)
 Firewall   ufw active, deny incoming
-Network    dual-stack, egress v4 OK, v6 OK
 NTP        synchronized
+Network    dual-stack, egress v4 OK, v6 OK
 Kernel     6.1.0-31 (matches installed — no reboot
            needed)
 Updates    0 pending

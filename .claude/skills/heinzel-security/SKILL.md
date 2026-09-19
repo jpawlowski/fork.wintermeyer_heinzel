@@ -81,14 +81,16 @@ Read on demand, only when the relevant section applies:
   severity rules (CRITICAL / WARN / INFO).
 - `references/ssh.md` — SSH password auth, root login, weak
   algorithms, MaxAuthTries, X11Forwarding (Linux and macOS).
-- `references/firewall.md` — Linux (ufw / firewalld), IPv6
-  coverage, and macOS (Application Firewall).
+- `references/firewall.md` — Linux (ufw / firewalld) and macOS
+  (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID
   0, system accounts with login shells.
 - `references/listening-services.md` — audit `ss` / `lsof`
   output, flag databases on 0.0.0.0.
 - `references/kernel-os.md` — sysctl checks: ASLR, IP forwarding,
   ICMP redirects, SUID core dumps.
+- `references/firewall-ipv6.md` — whether the firewall filters
+  IPv6 as well (ufw, firewalld, nftables, legacy iptables).
 - `references/file-permissions.md` — world-writable system files,
   SUID/SGID audit, /tmp mount options, cron perms, unowned files.
 - `references/intrusion-prevention.md` — fail2ban status.

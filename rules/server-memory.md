@@ -1,10 +1,9 @@
 # Server Memory
 
 Each server: `memory/servers/<hostname>/` with
-`memory.md`, `network.md`, `changelog.log`,
-optionally `todo.md`, and optionally `rules.md`
-(per-server rule overrides — see CLAUDE.md → Rule
-Overrides).
+`memory.md`, `changelog.log`, optionally `todo.md`,
+and optionally `rules.md` (per-server rule
+overrides — see CLAUDE.md → Rule Overrides).
 
 **On first connection:** create directory and
 `memory.md` with at least:
@@ -17,7 +16,6 @@ Overrides).
 - CPU: 4x Intel Xeon E-2236 @ 3.40GHz
 - RAM: 16 GB
 - Disk: 80 GB (/ ext4, 45% used)
-- Network: dual-stack, v6 egress OK — see network.md
 - Last connected: 2026-02-25
 ```
 
@@ -32,3 +30,12 @@ outdated entries, merge related items.
 
 Memory files never hold credential values — see
 `rules/secrets.md`.
+
+`memory/servers/<hostname>/network.md` holds the
+network profile (`rules/network.md`). `memory.md`
+carries one summary line for it, kept in step with
+`network.md`:
+
+```markdown
+- Network: dual-stack, v6 egress OK — see network.md
+```

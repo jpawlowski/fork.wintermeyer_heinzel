@@ -222,9 +222,14 @@ firewall-cmd --state
 ```
 
 - **CRITICAL** if the firewall is inactive or not installed
-- On hosts with a global IPv6 address, also run
-  `heinzel-security` → `references/firewall.md` → IPv6
-  coverage; an unfiltered IPv6 is **CRITICAL**
+
+## Failed systemd Units
+
+```bash
+systemctl --failed --no-pager --no-legend
+```
+
+- **WARN** for each failed unit — list them by name
 
 ## Network
 
@@ -234,15 +239,10 @@ Linux (one call) and compare it with the host's
 `rules/network.md` → Findings at its severity. An
 uplink address that differs from `network.md` is
 **INFO**: re-run the profile and update `network.md`
-(workflow step 6).
-
-## Failed systemd Units
-
-```bash
-systemctl --failed --no-pager --no-legend
-```
-
-- **WARN** for each failed unit — list them by name
+(workflow step 6), including the `- Network:` summary line
+in `memory.md`. On hosts with a global IPv6 address, also run
+`heinzel-security` → `references/firewall-ipv6.md`; an
+unfiltered IPv6 is **CRITICAL**.
 
 ## NTP / Time Sync
 

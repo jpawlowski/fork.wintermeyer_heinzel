@@ -343,8 +343,7 @@ Run routine health inspections on any server:
 ```
 
 Heinzel checks disk, memory, load, pending updates,
-firewall, network reachability, SSL certificates,
-failed services, and
+firewall, SSL certificates, failed services, and
 server-specific services. Problems are highlighted
 at the top of a concise report.
 
@@ -369,8 +368,8 @@ Compare key policies across every server Heinzel knows about:
 ```
 
 Heinzel probes unattended-upgrades, sshd effective config,
-firewall posture, MTA, time sync, auto-reboot behaviour and
-the network profile on each host in `memory/servers/`, then renders a
+firewall posture, MTA, time sync, and auto-reboot behaviour
+on each host in `memory/servers/`, then renders a
 side-by-side table that highlights where servers disagree.
 It makes no configuration changes on any host (it only
 writes one audit-trail line to each journal). Use it after
@@ -997,8 +996,6 @@ rules/                 — Upstream rule files (git-tracked)
                          against the live system before
                          reporting or escalating it
   dns-aliases.md       — DNS alias detection & management
-  network.md           — Network profile: manager,
-                         IPv4/IPv6 stack, DNS, egress
   backups.md           — Config file backup procedure
   best-practices.md    — Common anti-patterns to review
                          before risky actions
@@ -1038,7 +1035,6 @@ memory/                — All your user state (gitignored
                          top of rules/*.md
   servers/<hostname>/
     memory.md          — Server state snapshot
-    network.md         — Network profile
     changelog.log      — Local change history
     todo.md            — Session task list
     rules.md           — Per-server rule overrides

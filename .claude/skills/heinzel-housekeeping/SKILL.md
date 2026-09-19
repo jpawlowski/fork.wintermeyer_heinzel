@@ -48,11 +48,9 @@ applies before any of this runs.
    Code cancels sibling calls, so grouping limits blast radius.
 5. **Emit the report** using the format in
    `references/report-format.md`.
-6. **Update `memory.md` and `network.md`** immediately after,
-   if the checks revealed changed facts (disk usage shifted
-   significantly, a new service appeared, a service was
-   removed, the network changed). Keep the `- Network:`
-   summary line in `memory.md` in step with `network.md`.
+6. **Update `memory.md`** immediately after, if the checks
+   revealed changed facts (disk usage shifted significantly, a
+   new service appeared, a service was removed).
 7. **Log the summary** to the system journal and mirror to the
    local changelog per `rules/changelog.md`:
 

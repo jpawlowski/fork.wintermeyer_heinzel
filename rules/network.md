@@ -573,7 +573,7 @@ format.
   target returns nothing in any family).
 - A GUA exists and the firewall filters IPv4 but not
   IPv6. See `heinzel-security` →
-  `references/firewall.md` → IPv6 coverage.
+  `references/firewall-ipv6.md`.
 
 **WARN**
 

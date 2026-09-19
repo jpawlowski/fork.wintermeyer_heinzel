@@ -29,25 +29,25 @@ moment") — don't skip.
 6. **Server memory file.** Create on first
    connection, read on every subsequent connection.
    See `rules/server-memory.md`.
-7. **Network profile.** Full profile per
-   `rules/network.md` → When (first connection, no
-   `network.md` yet, `Probed:` older than 90 days).
-   Otherwise only the quick check: add
+7. **Activity check.** Every connection, not just
+   the first. See `rules/activity-check.md`. The
+   same call carries the network check: on first
+   connection, without `network.md`, or when its
+   `Probed:` is older than 90 days, build the full
+   profile per `rules/network.md`; otherwise add
    `ip -br addr show dev <uplink>` (`ifconfig
-   <uplink>` on BSD and macOS) to the activity-check
-   call and compare it with `network.md`; read
-   `rules/network.md` only when it differs.
-8. **Activity check.** Every connection, not just
-   the first. See `rules/activity-check.md`.
-9. **Then** execute the user's request.
+   <uplink>` on BSD and macOS) and compare it with
+   `network.md`, reading `rules/network.md` only
+   when it differs.
+8. **Then** execute the user's request.
 
 ## Local mode
 
 In local mode (`localhost`, the user's own
 hostname), skip steps 1–4 — they are remote-only
 (see `CLAUDE.md` → How It Works → Local mode).
-Still run OS detection, server memory, network
-profile, and activity check.
+Still run OS detection, server memory, and activity
+check.
 
 ## Why it's mandatory
 
