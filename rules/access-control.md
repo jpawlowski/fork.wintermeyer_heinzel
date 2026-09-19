@@ -26,25 +26,27 @@ to edit the file, or by editing it directly.
 
 ## Shared Lookup Logic
 
-For both files, the check is:
+For both files, the check is (stop at the first
+match):
 
 1. If the file does not exist, skip (nothing to
    check).
-2. Is the target hostname listed?
-3. Resolve the target's IP(s) (A-record query /
-   python3 fallback, same as DNS alias detection —
-   see `rules/dns-aliases.md`). Is a resolved IP
-   listed?
+2. Is the target hostname, or the name `ssh -G`
+   maps it to (`rules/dns-aliases.md` → Detection
+   step 1), listed?
+3. Resolve the target's IP(s)
+   (`rules/dns-aliases.md` → Detection step 1).
+   Is a resolved IP listed?
 4. Resolve each listed hostname to its IP(s) the
-   same way and compare against the target's
-   IP(s). This catches DNS aliases of listed
-   hosts that a plain string match would miss.
+   same way, once per session, and compare against
+   the target's IP(s). This catches DNS aliases of
+   listed hosts that a plain string match would
+   miss.
 
-If DNS resolution fails (no `dig`/`python3`, or DNS
-is down), fall back to exact string matching and
-tell the user explicitly that the IP-level check
-could not be performed. Err on the side of caution
-for anything ambiguous.
+If nothing resolves, fall back to exact string
+matching and tell the user explicitly that the
+IP-level check could not be performed. Err on the
+side of caution for anything ambiguous.
 
 ## Server Blacklist
 

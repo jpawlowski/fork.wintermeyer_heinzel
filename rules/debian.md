@@ -155,6 +155,14 @@ third-party PPAs.
   `ufw status verbose` — look for
   `Default: deny (incoming)`. If incoming is set to
   `allow`, fix with `ufw default deny incoming`.
+- **Native nftables** is installed on Debian with
+  its unit off, and counts as a firewall once
+  enabled: `nftables.service` loads
+  `/etc/nftables.conf`, whose stock version starts
+  with `flush ruleset`, so starting, reloading or
+  stopping it wipes ufw's rules. A host that runs it
+  needs no ufw on top. Checks: `heinzel-security` →
+  `references/firewall-nftables-docker.md`.
 
 ## Automatic Security Updates
 
