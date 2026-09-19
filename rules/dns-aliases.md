@@ -43,12 +43,13 @@ symlink):
    dig +short +time=2 +tries=1 A <hostname> | \
      grep -E '^[0-9.]+$'
    ```
-   Verify the syntax against the tool versions on
-   the machine running the query (see CLAUDE.md →
-   Verify Before Running). Resolve once per
-   connection and reuse the result for the access
-   checks and IP Verification. If nothing resolves,
-   the IP comparisons cannot run: tell the user so.
+   Verify the syntax of the tool you use on the
+   machine running the query (see CLAUDE.md →
+   Verify Before Running). The blacklist and
+   read-only checks resolve the name this way
+   before this step: reuse their result instead of
+   resolving again. If nothing resolves, the IP
+   comparisons cannot run: tell the user so.
 
 2. **Compare against known servers.** Scan existing
    `memory/servers/*/memory.md` files (skip

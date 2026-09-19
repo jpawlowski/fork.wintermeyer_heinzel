@@ -26,21 +26,22 @@ to edit the file, or by editing it directly.
 
 ## Shared Lookup Logic
 
-For both files, the check is:
+For both files, the check is (stop at the first
+match):
 
 1. If the file does not exist, skip (nothing to
    check).
 2. Is the target hostname listed?
-3. Resolve the target's IP(s) the way `ssh` does,
-   as in `rules/dns-aliases.md` → Detection step 1.
+3. Resolve the target's IP(s)
+   (`rules/dns-aliases.md` → Detection step 1).
    Is a resolved IP listed?
 4. Resolve each listed hostname to its IP(s) the
-   same way and compare against the target's
-   IP(s). This catches DNS aliases of listed
-   hosts that a plain string match would miss.
+   same way, once per session, and compare against
+   the target's IP(s). This catches DNS aliases of
+   listed hosts that a plain string match would
+   miss.
 
-If no address resolves (no resolver tool, unknown
-name, or DNS is down), fall back to exact string
+If nothing resolves, fall back to exact string
 matching and tell the user explicitly that the
 IP-level check could not be performed. Err on the
 side of caution for anything ambiguous.
