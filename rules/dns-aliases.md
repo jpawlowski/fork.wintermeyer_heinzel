@@ -44,29 +44,25 @@ symlink):
 4. **No match -> new server.** Normal first-connection
    flow. Include resolved IP as `- IP:` field.
    Once connected, record the server's own name as
-   `- FQDN:`:
+   `- FQDN:`, probed in the same call as the OS
+   detection:
    ```
    hostname -f
    ```
-   On Linux this is the resolver's canonical name
-   for the host (so `/etc/hosts` counts); on FreeBSD
-   and macOS it is the configured hostname
-   unchanged. Accept it only if it contains a dot
-   and is not `localhost…`. Otherwise, or if
-   `hostname` is missing, use the canonical name the
-   local resolver returns for the name the user
-   gave:
+   Use a name only if it contains a dot and is not
+   machine- or link-local (`localhost`,
+   `localdomain`, `.local`): such names mean a
+   different host on every network. If the result
+   fails that test, or `hostname` is missing, apply
+   the same test to the canonical name the local
+   resolver returns for the name the user gave:
    ```
    python3 -c "import socket; \
      print(socket.getaddrinfo('<hostname>', None, \
      flags=socket.AI_CANONNAME)[0][3])"
    ```
-   Treat a name ending in `.local` like one without
-   a dot: mDNS names are unique only on their own
-   network segment. If neither yields a usable name,
-   leave the field out rather than guess. The
-   directory keeps the name it was created under;
-   `- FQDN:` never renames it.
+   If neither passes, leave the field out. `- FQDN:`
+   never renames the directory.
 
 ## Subsequent Connections via Alias
 
@@ -93,11 +89,9 @@ elsewhere (detach it).
 When the user names a host without a dot, scan
 `memory/servers/*/memory.md` (skip symlinks) for
 `- FQDN:` lines whose first label equals that name,
-ignoring case. If more than one server matches, do
-not guess and do not connect: list the matching
-FQDNs and ask which server is meant, then continue
-with that server's directory. One match or none:
-continue as usual.
+ignoring case. If more than one server matches,
+list their FQDNs and ask which is meant before
+resolving or connecting.
 
 ## Removing an Alias
 
