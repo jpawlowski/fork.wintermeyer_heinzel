@@ -77,17 +77,12 @@ command -v brew &>/dev/null && brew outdated
 
 ## Network
 
-Compare the live network with the machine's
-`network.md` (see `rules/network.md`). Run the macOS
-probe and the egress test from `rules/network.md`.
-
-- **WARN** if a family that `network.md` records as
-  working has no default route or fails the egress
-  test
-- **INFO** if the primary service or its addresses
-  differ from `network.md` (normal on a laptop that
-  changes networks — update `network.md`, no
-  further finding)
+Run the macOS probe and egress test from
+`rules/network.md` and compare with the machine's
+`network.md`. Report findings from
+`rules/network.md` → Findings at their severity. A
+changed primary service or address is normal on a
+laptop: update `network.md`, no finding.
 
 ## SMART Disk Status
 

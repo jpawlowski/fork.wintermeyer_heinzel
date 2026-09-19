@@ -564,13 +564,9 @@ Created on first need. Current facts only.
 ## Network Profile
 
 Read `rules/network.md`. Every server gets
-`memory/servers/<hostname>/network.md`: which
-manager owns the network, IPv4/IPv6 addresses and
-their ranges, static or dynamic addressing, routes,
-DNS, outbound reachability per address family, and
-the public A/AAAA/PTR view. Built on first
-connection, checked for drift afterwards. Identify
-the owner of a network config before editing it.
+`memory/servers/<hostname>/network.md` (manager,
+IPv4/IPv6 stack, DNS, egress). Identify the owner
+of a network config before editing it.
 
 ## Session To-Do List
 

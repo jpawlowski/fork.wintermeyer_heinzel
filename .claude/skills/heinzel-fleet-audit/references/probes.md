@@ -153,6 +153,10 @@ Row keys for the table:
 - Default policy (deny incoming required)
 - Number of open ports / services
 - Whether 22/tcp is open (must be yes)
+- IPv6 filtered — on hosts with a global IPv6
+  address, run the check from `heinzel-security` →
+  `references/firewall.md` → IPv6 coverage inside
+  the same privilege branch
 
 Highlight as drift:
 
@@ -238,62 +242,41 @@ Highlight as drift / warning:
 
 ## 7. Network
 
-Run sections B, C and D of the Linux probes and the
-egress test from `rules/network.md`, plus this line
-from section A:
-
-```bash
-for u in systemd-networkd NetworkManager networking \
-         network wicked systemd-resolved; do
-  printf '%s=%s\n' "$u" \
-    "$(systemctl is-active "$u" 2>/dev/null)"
-done
-```
-
-Skip the netplan grep (it needs root) and the public
-DNS view (it runs on the workstation, not per host).
-None of the rest needs root. Classify with the
-Classification section of `rules/network.md`.
+Run the Linux probe from `rules/network.md` → Probe —
+Linux as the `###net###` block. It is one script,
+handles its one root-only read (netplan) with the
+privilege ladder above, and bounds its output.
+Classify with `rules/network.md` → Classification.
 
 Row keys:
 
-- Network manager
-- cloud-init owns network (yes/no)
+- Network manager, and whether cloud-init owns it
 - Stack (`dual-stack`, `v4-only`, `v6-only`,
   `v4 + ULA`, plus `v6 broken` / `no v6 route`)
-- IPv4 address class (public / RFC 1918 / CGNAT)
-  and addressing (static / DHCP)
-- IPv6 address class (GUA / ULA / none) and
-  addressing (static / SLAAC / DHCPv6)
-- RA handled by (kernel / networkd / NetworkManager
-  / none)
+- IPv4 class and addressing (public / RFC 1918 /
+  CGNAT; static / DHCP)
+- IPv6 class and addressing (GUA / ULA / none;
+  static / SLAAC / DHCPv6)
+- RA handled by (kernel / networkd /
+  NetworkManager / none)
 - Forwarding v4 / v6
 - Egress v4 / v6 (`OK`, `fail`, `inconclusive`,
   `via proxy`)
-- resolv.conf mode (resolved stub / resolved direct /
-  NetworkManager / resolvconf / static)
-- Upstream nameservers (count per family)
-- DNSSEC / DoT
-- Temporary IPv6 addresses (yes/no)
+- resolv.conf mode and upstream nameservers
 
-Highlight as drift:
+Drift that only a comparison across hosts shows:
 
-- Any host whose stack carries `v6 broken` or
-  `no v6 route` while others reach IPv6.
-- Any host caught in the RA/forwarding trap
-  (`rules/network.md` → Findings), with the
-  remaining `expires` of its IPv6 default route.
-- Different managers or resolv.conf modes across
-  hosts of the same distro release — the same fix
-  will not apply everywhere.
-- Different upstream nameservers across hosts in the
-  same network.
-- A host with IPv6 disabled while the others run
+- Different managers or resolv.conf modes on hosts
+  of the same distro release — the same fix will not
+  apply everywhere.
+- Different upstream nameservers in the same
+  network.
+- IPv6 disabled on one host while the others run
   dual-stack.
-- Any live value that contradicts the host's
-  `network.md` (the profile is stale — suggest
-  re-running it on that host).
+- A live value that contradicts the host's
+  `network.md` — suggest re-running the profile
+  there.
 
-Every finding from `rules/network.md` → Findings
-that shows up on a single host goes into "Drift
-detected" too, with its severity.
+Every finding from `rules/network.md` → Findings on
+any host also goes into "Drift detected", with its
+severity.

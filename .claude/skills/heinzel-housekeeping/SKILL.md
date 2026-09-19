@@ -37,8 +37,7 @@ applies before any of this runs.
    CLAUDE.md session-start preflight — do not re-read it.
 2. **Select checks.** Run all baseline checks for the detected OS
    plus any service-specific checks triggered by entries in the
-   server's `memory.md` (e.g. PostgreSQL, nginx, Docker).
-   The network check compares against `network.md`. The
+   server's `memory.md` (e.g. PostgreSQL, nginx, Docker). The
    backup-presence check from `references/backup-presence.md`
    runs on every host, independent of `memory.md` entries.
 3. **Run the version check** procedure from
@@ -49,9 +48,11 @@ applies before any of this runs.
    Code cancels sibling calls, so grouping limits blast radius.
 5. **Emit the report** using the format in
    `references/report-format.md`.
-6. **Update `memory.md`** immediately after, if the checks
-   revealed changed facts (disk usage shifted significantly, a
-   new service appeared, a service was removed).
+6. **Update `memory.md` and `network.md`** immediately after,
+   if the checks revealed changed facts (disk usage shifted
+   significantly, a new service appeared, a service was
+   removed, the network changed). Keep the `- Network:`
+   summary line in `memory.md` in step with `network.md`.
 7. **Log the summary** to the system journal and mirror to the
    local changelog per `rules/changelog.md`:
 

@@ -91,10 +91,8 @@ No input chain in any family means no inbound
 filtering at all — report that under "No active
 firewall" above, not here.
 
-- Global IPv6 address and the gap above →
-  **CRITICAL** "Firewall does not filter IPv6"
-- No global IPv6 address → OK with note ("IPv6
-  unfiltered, but no global address")
+- The gap above → **CRITICAL** "Firewall does not
+  filter IPv6"
 
 ## macOS
 

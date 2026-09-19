@@ -29,10 +29,14 @@ moment") — don't skip.
 6. **Server memory file.** Create on first
    connection, read on every subsequent connection.
    See `rules/server-memory.md`.
-7. **Network profile.** Full profile on first
-   connection and on a known host without
-   `network.md`; afterwards a quick address
-   comparison. See `rules/network.md`.
+7. **Network profile.** Full profile per
+   `rules/network.md` → When (first connection, no
+   `network.md` yet, `Probed:` older than 90 days).
+   Otherwise only the quick check: add
+   `ip -br addr show dev <uplink>` (`ifconfig
+   <uplink>` on BSD and macOS) to the activity-check
+   call and compare it with `network.md`; read
+   `rules/network.md` only when it differs.
 8. **Activity check.** Every connection, not just
    the first. See `rules/activity-check.md`.
 9. **Then** execute the user's request.

@@ -21,11 +21,6 @@ Overrides).
 - Last connected: 2026-02-25
 ```
 
-`network.md` holds the network profile: manager,
-addresses, routes, DNS, egress per address family,
-and the public DNS view. Format and probes:
-`rules/network.md`.
-
 Adapt fields to OS (add Arch, Homebrew for macOS;
 add `Mode: local` for localhost).
 
